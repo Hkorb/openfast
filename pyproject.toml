@@ -28,11 +28,16 @@ jobs = 8
 
 [tool.scikit-build]
 build-dir = "build"
-wheel.install-dir = "OpenFAST"
-wheel.packages = ["glue-codes/openfast-pythonbindings/OpenFAST"]
-cmake.verbose = true
-logging.level = "INFO"
 strict-config = true
+logging.level = "INFO"
+
+[tool.scikit-build.wheel]
+install-dir = "OpenFAST"
+packages = ["glue-codes/openfast-pythonbindings/OpenFAST"]
+
+[tool.scikit_build.cmake]
+verbose = true
+build-type = "Release"
 
 [tool.scikit-build.cmake.define]
 BUILD_OPENFAST_CPP_API = "ON"
