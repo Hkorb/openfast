@@ -520,6 +520,7 @@ void fast::OpenFAST::getForceNodeCoordinates(double* currentCoords, int iNode, i
     assert(nSize==3);
     // Set coordinates at current node of current turbine
     int iTurbLoc = get_localTurbNo(iTurbGlob);
+    for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numForcePtsLoc(iTurbLoc);
     currentCoords[0] = cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode] + TurbineBasePos[iTurbLoc][0] ;
     currentCoords[1] = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] + TurbineBasePos[iTurbLoc][1] ;
     currentCoords[2] = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] + TurbineBasePos[iTurbLoc][2] ;
