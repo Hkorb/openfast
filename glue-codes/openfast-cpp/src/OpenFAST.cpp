@@ -477,7 +477,6 @@ void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, 
         cDriver_Output_to_FAST.v[j] = 0.0;
         cDriver_Output_to_FAST.w[j] = 0.0;
     }
-
 }
 
 void fast::OpenFAST::getApproxHubPos(double* currentCoords, int iTurbGlob, int nSize) {
@@ -574,6 +573,7 @@ void fast::OpenFAST::setVelocity(double* currentVelocity, int iNode, int iTurbGl
     cDriver_Output_to_FAST[iTurbLoc].w[iNode] = currentVelocity[2];
 }
 
+
 void fast::OpenFAST::setVelocityForceNode(double* currentVelocity, int iNode, int iTurbGlob, int nSize) {
     assert(nSize==3);
     // Set velocity at current node of current turbine -
@@ -584,6 +584,7 @@ void fast::OpenFAST::setVelocityForceNode(double* currentVelocity, int iNode, in
         forceNodeVel[iTurbLoc][iNode][i] = currentVelocity[i];
     }
 }
+
 
 void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
 
@@ -681,6 +682,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
     }
 }
 
+
 void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & torque, std::vector<double> & thrust) {
 
     //Compute the torque and thrust based on the forces at the actuator nodes
@@ -715,6 +717,7 @@ void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & to
     }
 }
 
+
 double fast::OpenFAST::computeRotorSpeed(int iTurbGlob) {
     int iTurbLoc = get_localTurbNo(iTurbGlob);
 
@@ -725,6 +728,165 @@ double fast::OpenFAST::computeRotorSpeed(int iTurbGlob) {
 
     double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
     return tangential_velocity /  radius;
+}
+
+
+void fast::OpenFAST::setAllLocalVelocities(double* nacelle_velocities, double* blade_velocities_x, double* blade_velocities_y, double* blade_velocities_z, double* tower_velocities_x, double* tower_velocities_y, double* tower_velocities_z){
+    
+    int iBladeNode = 0;
+    int iTowerNode = 0;
+    
+    for(int iTurbLoc = 0; iTurbLoc < nTurbinesProc; iTurbLoc++)
+    {
+        int iNode = 0;
+        int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
+        int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
+
+        //Nacelle
+        forceNodeVel[iTurbLoc][iNode][0] = nacelle_velocities[3*iTurbLoc  ];
+        forceNodeVel[iTurbLoc][iNode][1] = nacelle_velocities[3*iTurbLoc+1];
+        forceNodeVel[iTurbLoc][iNode][2] = nacelle_velocities[3*iTurbLoc+2];
+        iNode++;
+
+
+        //Blade
+        for(int i=0;i<nNodesAllBlades; i++)
+        {
+            forceNodeVel[iTurbLoc][iNode][0] = blade_velocities_x[iBladeNode];
+            forceNodeVel[iTurbLoc][iNode][1] = blade_velocities_y[iBladeNode];
+            forceNodeVel[iTurbLoc][iNode][2] = blade_velocities_z[iBladeNode];
+            iNode++; iBladeNode++;
+        }
+
+        //Tower
+        for(int i=0; i<nNodesTower; i++)
+        {
+            forceNodeVel[iTurbLoc][iNode][0] = tower_velocities_x[iTowerNode];
+            forceNodeVel[iTurbLoc][iNode][1] = tower_velocities_y[iTowerNode];
+            forceNodeVel[iTurbLoc][iNode][2] = tower_velocities_z[iTowerNode];
+            iNode++; iTowerNode++;
+        }
+    }
+}
+
+
+void fast::OpenFAST::getAllLocalForces(double* nacelle_forces, double* blade_forces_x, double* blade_forces_y, double* blade_forces_z, double* tower_forces_x, double* tower_forces_y, double* tower_forces_z){
+    
+    int iBladeNode = 0;
+    int iTowerNode = 0;
+
+    for(int iTurbLoc = 0; iTurbLoc < nTurbinesProc; iTurbLoc++)
+    {
+        int iNode = 0;
+        int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
+        int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
+
+        //Nacelle
+        nacelle_forces[3*iTurbLoc  ] = cDriver_Input_from_FAST[iTurbLoc].fx[iNode];
+        nacelle_forces[3*iTurbLoc+1] = cDriver_Input_from_FAST[iTurbLoc].fy[iNode];
+        nacelle_forces[3*iTurbLoc+2] = cDriver_Input_from_FAST[iTurbLoc].fz[iNode];
+        iNode++;
+
+        //Blade
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fx[iNode], &cDriver_Input_from_FAST[iTurbLoc].fx[iNode]+nNodesAllBlades, &blade_forces_x[iBladeNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fy[iNode], &cDriver_Input_from_FAST[iTurbLoc].fy[iNode]+nNodesAllBlades, &blade_forces_y[iBladeNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fz[iNode], &cDriver_Input_from_FAST[iTurbLoc].fz[iNode]+nNodesAllBlades, &blade_forces_z[iBladeNode]);
+        iNode += nNodesAllBlades;
+        iBladeNode += nNodesAllBlades;
+
+        //Tower
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fx[iNode], &cDriver_Input_from_FAST[iTurbLoc].fx[iNode]+nNodesTower, &tower_forces_x[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fy[iNode], &cDriver_Input_from_FAST[iTurbLoc].fy[iNode]+nNodesTower, &tower_forces_y[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fz[iNode], &cDriver_Input_from_FAST[iTurbLoc].fz[iNode]+nNodesTower, &tower_forces_z[iTowerNode]);
+        iNode += nNodesTower;
+        iTowerNode += nNodesTower;
+    }
+}
+
+
+/*Copies all coordinates at force nodes relative to the hub position.
+Assumes arrays are layed out as turbine, blade, node*/
+void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z){
+    
+    int iBladeNode = 0;
+    int iTowerNode = 0;
+
+    for(int iTurbLoc = 0; iTurbLoc < nTurbinesProc; iTurbLoc++)
+    {
+        int iNode = 0;
+        int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
+        int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
+
+        //Nacelle
+        nacelle_coordinates[3*iTurbLoc  ] = cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode];
+        nacelle_coordinates[3*iTurbLoc+1] = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode];
+        nacelle_coordinates[3*iTurbLoc+2] = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode];
+        iNode++;
+
+        //Blade
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode]+nNodesAllBlades, &blade_coordinates_x[iBladeNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode]+nNodesAllBlades, &blade_coordinates_y[iBladeNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode]+nNodesAllBlades, &blade_coordinates_z[iBladeNode]);
+        iNode += nNodesAllBlades;
+        iBladeNode += nNodesAllBlades;
+
+        //Tower
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode]+nNodesTower, &tower_coordinates_x[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode]+nNodesTower, &tower_coordinates_y[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode]+nNodesTower, &tower_coordinates_z[iTowerNode]);
+        iNode += nNodesTower;
+        iTowerNode += nNodesTower;
+    }
+}
+
+
+void fast::OpenFAST::getAllLocalAzimuths(double* azimuths){
+
+    for(int iTurbLoc=0; iTurbLoc<nTurbinesProc; iTurbLoc++)
+    {
+        int iNode = 0;
+        int nBlades = get_numBladesLoc(iTurbLoc);
+        int nBladeNodes = get_numForcePtsBladeLoc(iTurbLoc);
+        int nTowerNodes = get_numForcePtsTwrLoc(iTurbLoc);
+
+        double avg_azimuth = 0;
+
+        double azimuth_offset = 2*M_PI/double(nBlades);
+
+        double nacelle_coord_y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode];
+        double nacelle_coord_z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode];
+
+        iNode++;
+
+        for(int iBlade = 0; iBlade<nBlades; iBlade++)
+        {
+            double coord_y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] - nacelle_coord_y;
+            double coord_z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] - nacelle_coord_z;
+            double azimuth_per_blade =  atan2(-coord_y, coord_z) - iBlade * azimuth_offset;
+            avg_azimuth += azimuth_per_blade < -M_PI ? azimuth_per_blade + 2*M_PI : azimuth_per_blade;
+            iNode += nBladeNodes;
+        }
+
+        iNode += nTowerNodes;
+
+        azimuths[iTurbLoc] = avg_azimuth/double(nBlades);
+    }
+}
+
+
+void fast::OpenFAST::getAllLocalRotorSpeeds(double* rotor_speeds){
+    for(int iTurbLoc=0; iTurbLoc<nTurbinesProc; iTurbLoc++)
+    {
+        int iNode = 0;
+
+        double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+        double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+        
+        double radius = sqrt(y*y+z*z);
+
+        double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
+        rotor_speeds[iTurbLoc] = tangential_velocity /  radius;
+    }
 }
 
 fast::ActuatorNodeType fast::OpenFAST::getVelNodeType(int iTurbGlob, int iNode) {

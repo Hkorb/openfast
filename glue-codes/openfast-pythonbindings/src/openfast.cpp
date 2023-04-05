@@ -13,13 +13,6 @@
 // TODO get pitch
 namespace py = pybind11;
 
-constexpr double cPi = 3.141592653589793;
-constexpr double c2PiO3 = 2.0*cPi/3.0;
-
-int get_index(int i_turbine, int n_turbines, int i_blade, int n_blades, int i_node, int n_nodes)
-{
-    return i_node + n_nodes*(i_blade + n_blades*i_turbine);
-}
 
 template<class dtype>
 dtype* convert_to_pointer(py::array_t<dtype> array)
@@ -27,240 +20,44 @@ dtype* convert_to_pointer(py::array_t<dtype> array)
     return static_cast<dtype *>(array.request().ptr);
 }
 
-void set_velocities(fast::OpenFAST& self,
-    py::array_t<double> nacelle_velocities_arr, 
-    py::array_t<double> blade_velocities_x_arr, py::array_t<double> blade_velocities_y_arr, py::array_t<double> blade_velocities_z_arr,
-    py::array_t<double> tower_velocities_x_arr, py::array_t<double> tower_velocities_y_arr, py::array_t<double> tower_velocities_z_arr)
+
+void set_velocities(
+    fast::OpenFAST& self, 
+    py::array_t<double> nacelle_velocities, 
+    py::array_t<double> blade_velocities_x, py::array_t<double> blade_velocities_y, py::array_t<double> blade_velocities_z, 
+    py::array_t<double> tower_velocities_x, py::array_t<double> tower_velocities_y, py::array_t<double> tower_velocities_z) 
 {
-
-
-    auto nacelle_velocities = convert_to_pointer(nacelle_velocities_arr);
-    auto blade_velocities_x = convert_to_pointer(blade_velocities_x_arr);
-    auto blade_velocities_y = convert_to_pointer(blade_velocities_y_arr);
-    auto blade_velocities_z = convert_to_pointer(blade_velocities_z_arr);
-    
-    auto tower_velocities_x = convert_to_pointer(tower_velocities_x_arr);
-    auto tower_velocities_y = convert_to_pointer(tower_velocities_y_arr);
-    auto tower_velocities_z = convert_to_pointer(tower_velocities_z_arr);
-
-    //for now assume same nBlades and nBladeNodes at all turbines
-    int nTurbines = self.get_nTurbinesProc();
-    int nBlades = self.get_numBlades(0);
-    int nBladeNodes = self.get_numForcePtsBlade(0);
-    int nTowerNodes = self.get_numForcePtsTwr(0);
-
-    int iNode = 0;
-    for(int i_turbine=0; i_turbine<nTurbines; i_turbine++)
-    {
-        int iTurbGlob = self.get_globalTurbNo(i_turbine);
-
-        // Nacelle
-        double vel[3] = {nacelle_velocities[i_turbine*3], nacelle_velocities[i_turbine*3+1], nacelle_velocities[i_turbine*3+2]};
-        self.setVelocityForceNode(vel, iNode, iTurbGlob);
-        iNode++;
-
-        // Blades
-        for(int i_blade=0; i_blade<nBlades; i_blade++)
-        {
-            for(int i_blade_node=0; i_blade_node<nBladeNodes; i_blade_node++)
-            {
-                int index = get_index(i_turbine, nTurbines, i_blade, nBlades, i_blade_node, nBladeNodes);
-                double vel[3] = {blade_velocities_x[index], blade_velocities_y[index], blade_velocities_z[index]};
-                self.setVelocityForceNode(vel, iNode, iTurbGlob);
-                iNode++;
-            }
-        }
-
-        // Tower
-        for(int i_tower_node=0; i_tower_node<nTowerNodes; i_tower_node++)
-        {
-            int index = get_index(i_turbine, nTurbines, 0,1, i_tower_node, nTowerNodes);
-            double vel[3] = {tower_velocities_x[index], tower_velocities_y[index], tower_velocities_z[index]};
-            self.setVelocityForceNode(vel, iNode, iTurbGlob);
-            iNode++;
-        }
-    }
+    self.setAllLocalVelocities( 
+        convert_to_pointer(nacelle_velocities), 
+        convert_to_pointer(blade_velocities_x), convert_to_pointer(blade_velocities_y), convert_to_pointer(blade_velocities_z), 
+        convert_to_pointer(tower_velocities_x), convert_to_pointer(tower_velocities_y), convert_to_pointer(tower_velocities_z));
 }
 
-void get_forces(fast::OpenFAST& self,
-    py::array_t<double> nacelle_forces_arr,
-    py::array_t<double> blade_forces_x_arr, py::array_t<double> blade_forces_y_arr, py::array_t<double> blade_forces_z_arr,
-    py::array_t<double> tower_forces_x_arr, py::array_t<double> tower_forces_y_arr, py::array_t<double> tower_forces_z_arr)
+
+void get_forces(
+    fast::OpenFAST& self, 
+    py::array_t<double> nacelle_forces, 
+    py::array_t<double> blade_forces_x, py::array_t<double> blade_forces_y, py::array_t<double> blade_forces_z, 
+    py::array_t<double> tower_forces_x, py::array_t<double> tower_forces_y, py::array_t<double> tower_forces_z) 
 {
-
-    auto nacelle_forces = convert_to_pointer(nacelle_forces_arr);
-    auto blade_forces_x = convert_to_pointer(blade_forces_x_arr);
-    auto blade_forces_y = convert_to_pointer(blade_forces_y_arr);
-    auto blade_forces_z = convert_to_pointer(blade_forces_z_arr);
-    
-    auto tower_forces_x = convert_to_pointer(tower_forces_x_arr);
-    auto tower_forces_y = convert_to_pointer(tower_forces_y_arr);
-    auto tower_forces_z = convert_to_pointer(tower_forces_z_arr);
-
-    //for now assume same nBlades and nBladeNodes at all turbines
-    int nTurbines = self.get_nTurbinesProc();
-    int nBlades = self.get_numBlades(0);
-    int nBladeNodes = self.get_numForcePtsBlade(0);
-    int nTowerNodes = self.get_numForcePtsTwr(0);
-
-
-    int iNode = 0;
-    for(int i_turbine=0; i_turbine<nTurbines; i_turbine++)
-    {
-        int iTurbGlob = self.get_globalTurbNo(i_turbine);
-
-        double force[3];
-        self.getForce(force, iNode, iTurbGlob);
-        nacelle_forces[3*i_turbine  ] = -force[0];
-        nacelle_forces[3*i_turbine+1] = -force[1];
-        nacelle_forces[3*i_turbine+2] = -force[2];
-
-        iNode++;
-
-        for(int i_blade=0; i_blade<nBlades; i_blade++)
-        {
-
-            for(int i_blade_node=0; i_blade_node<nBladeNodes; i_blade_node++)
-            {
-                int index = get_index(i_turbine, nTurbines, i_blade, nBlades, i_blade_node, nBladeNodes);
-                double forces[3];
-                self.getForce(forces, iNode, iTurbGlob);
-                iNode++;
-                blade_forces_x[index] = -forces[0];
-                blade_forces_y[index] = -forces[1];
-                blade_forces_z[index] = -forces[2];
-            }
-        }
-
-        for(int i_tower_node=0; i_tower_node<nTowerNodes; i_tower_node++)
-        {
-            int index = get_index(i_turbine, nTurbines, 0, 1, i_tower_node, nTowerNodes);
-            double forces[3];
-            self.getForce(forces, iNode, iTurbGlob);
-            iNode++;
-            tower_forces_x[index] = -forces[0];
-            tower_forces_y[index] = -forces[1];
-            tower_forces_z[index] = -forces[2];
-        }
-    }
+    self.getAllLocalForces( 
+        convert_to_pointer(nacelle_forces), 
+        convert_to_pointer(blade_forces_x), convert_to_pointer(blade_forces_y), convert_to_pointer(blade_forces_z), 
+        convert_to_pointer(tower_forces_x), convert_to_pointer(tower_forces_y), convert_to_pointer(tower_forces_z));
 }
 
-void get_coordinates(fast::OpenFAST& self,
-    py::array_t<double> nacelle_coordinates_arr,
-    py::array_t<double> blade_coordinates_x_arr, py::array_t<double> blade_coordinates_y_arr, py::array_t<double> blade_coordinates_z_arr,
-    py::array_t<double> tower_coordinates_x_arr, py::array_t<double> tower_coordinates_y_arr, py::array_t<double> tower_coordinates_z_arr)
+void get_coordinates(
+    fast::OpenFAST& self, 
+    py::array_t<double> nacelle_coordinates, 
+    py::array_t<double> blade_coordinates_x, py::array_t<double> blade_coordinates_y, py::array_t<double> blade_coordinates_z, 
+    py::array_t<double> tower_coordinates_x, py::array_t<double> tower_coordinates_y, py::array_t<double> tower_coordinates_z) 
 {
-    auto nacelle_coordinates = convert_to_pointer(nacelle_coordinates_arr);
-    auto blade_coordinates_x = convert_to_pointer(blade_coordinates_x_arr);
-    auto blade_coordinates_y = convert_to_pointer(blade_coordinates_y_arr);
-    auto blade_coordinates_z = convert_to_pointer(blade_coordinates_z_arr);
-    
-    auto tower_coordinates_x = convert_to_pointer(tower_coordinates_x_arr);
-    auto tower_coordinates_y = convert_to_pointer(tower_coordinates_y_arr);
-    auto tower_coordinates_z = convert_to_pointer(tower_coordinates_z_arr);
-
-    //for now assume same nBlades and nBladeNodes at all turbines
-    int nTurbines = self.get_nTurbinesProc();
-    int nBlades = self.get_numBlades(0);
-    int nBladeNodes = self.get_numForcePtsBlade(0);
-    int nTowerNodes = self.get_numForcePtsTwr(0);
-
-    int iNode = 0;
-    for(int i_turbine=0; i_turbine<nTurbines; i_turbine++)
-    {
-        int iTurbGlob = self.get_globalTurbNo(i_turbine);
-        double hubPos[3];
-        self.getHubPos(hubPos, iTurbGlob);
-        double coordinates[3];
-        self.getForceNodeCoordinates(coordinates, iNode, iTurbGlob);
-        nacelle_coordinates[3*i_turbine  ] = coordinates[0] - hubPos[0];
-        nacelle_coordinates[3*i_turbine+1] = coordinates[1] - hubPos[1];
-        nacelle_coordinates[3*i_turbine+2] = coordinates[2] - hubPos[2];
-
-        iNode++;
-
-        for(int i_blade=0; i_blade<nBlades; i_blade++)
-        {
-
-            for(int i_blade_node=0; i_blade_node<nBladeNodes; i_blade_node++)
-            {
-                int index = get_index(i_turbine, nTurbines, i_blade, nBlades, i_blade_node, nBladeNodes);
-                double coordinates[3];
-                self.getForceNodeCoordinates(coordinates, iNode, iTurbGlob);
-                iNode++;
-                blade_coordinates_x[index] = coordinates[0] - hubPos[0];
-                blade_coordinates_y[index] = coordinates[1] - hubPos[1];
-                blade_coordinates_z[index] = coordinates[2] - hubPos[2];
-            }
-        }
-
-        for(int i_tower_node=0; i_tower_node<nTowerNodes; i_tower_node++)
-        {
-            int index = get_index(i_turbine, nTurbines, 0, 1, i_tower_node, nTowerNodes);
-            double coordinates[3];
-            self.getForceNodeCoordinates(coordinates, iNode, iTurbGlob);
-            iNode++;
-            tower_coordinates_x[index] = coordinates[0];
-            tower_coordinates_y[index] = coordinates[1];
-            tower_coordinates_z[index] = coordinates[2];
-        }
-    }
+    self.getAllLocalCoordinates( 
+        convert_to_pointer(nacelle_coordinates), 
+        convert_to_pointer(blade_coordinates_x), convert_to_pointer(blade_coordinates_y), convert_to_pointer(blade_coordinates_z), 
+        convert_to_pointer(tower_coordinates_x), convert_to_pointer(tower_coordinates_y), convert_to_pointer(tower_coordinates_z));
 }
 
-void get_azimuths(fast::OpenFAST& self, py::array_t<double> azimuths_arr)
-{
-
-    double* azimuths = convert_to_pointer(azimuths_arr);
-    int nTurbines = self.get_nTurbinesProc();
-    int nBlades = self.get_numBlades(0);
-    int nBladeNodes = self.get_numForcePtsBlade(0);
-    int nTowerNodes = self.get_numForcePtsTwr(0);
-
-    for(int i_turbine=0; i_turbine<nTurbines; i_turbine++)
-    {
-        int iTurbGlob = self.get_globalTurbNo(i_turbine);
-        int index = get_index(i_turbine, nTurbines, 0, nBlades, 0, nBladeNodes);
-        int iNode = i_turbine*(1+nBlades*nBladeNodes+nTowerNodes) + 2;
-
-        double coords_blade_0[3];
-        self.getForceNodeCoordinates(coords_blade_0, iNode, iTurbGlob);
-        iNode = iNode + nBladeNodes;
-
-        double coords_blade_1[3];
-        self.getForceNodeCoordinates(coords_blade_1, iNode, iTurbGlob);
-        iNode = iNode + nBladeNodes;
-
-        double coords_blade_2[3];
-        self.getForceNodeCoordinates(coords_blade_2, iNode, iTurbGlob);
-
-        double center_x = (coords_blade_0[0] + coords_blade_1[0] + coords_blade_2[0]) / 3.0;
-        double center_y = (coords_blade_0[1] + coords_blade_1[1] + coords_blade_2[1]) / 3.0;
-        double center_z = (coords_blade_0[2] + coords_blade_1[2] + coords_blade_2[2]) / 3.0;
-
-        double az0 = atan2( -(coords_blade_0[1]-center_y), coords_blade_0[2]-center_z);
-
-        double az1 = atan2( -(coords_blade_1[1]-center_y), coords_blade_1[2]-center_z) - c2PiO3;
-        az1 = az1 + (az1 < -cPi ? 2*cPi : 0);
-
-        double az2 = atan2( -(coords_blade_2[1]-center_y), coords_blade_2[2]-center_z) - 2.0 * c2PiO3;
-        az2 = az2 + (az2 < -cPi ? 2*cPi : 0);
-
-        azimuths[i_turbine] = (az0+az1+az2)/3.0;
-    }
-}
-
-void get_omegas(fast::OpenFAST& self, py::array_t<double> omegas_arr)
-{
-
-    double* omegas = convert_to_pointer(omegas_arr);
-    int nTurbines = self.get_nTurbinesProc();
-
-    for(int i_turbine=0; i_turbine<nTurbines; i_turbine++)
-    {
-        int iTurbGlob = self.get_globalTurbNo(i_turbine);
-        omegas[i_turbine] = self.computeRotorSpeed(iTurbGlob);
-    }
-}
 
 PYBIND11_MODULE(bindings, m) {
     py::class_<fast::globTurbineDataType>(m, "GlobTurbineDataType")
@@ -369,8 +166,8 @@ PYBIND11_MODULE(bindings, m) {
                     thrust_array[3*i_turbine+2] = thrust_buffer[2];
                 }
             }, py::arg("torque"), py::arg("thrust"))
-        .def("get_azimuths", &get_azimuths, py::arg("azimuths"))
-        .def("get_omegas", &get_omegas, py::arg("omegas"))
+        .def("get_azimuths", [](fast::OpenFAST& self, py::array_t<double> azimuths){self.getAllLocalAzimuths(convert_to_pointer(azimuths));}, py::arg("azimuths"))
+        .def("get_rotor_speeds", [](fast::OpenFAST& self, py::array_t<double> rotor_speeds){self.getAllLocalRotorSpeeds(convert_to_pointer(rotor_speeds));}, py::arg("rotor_speeds"))
         .def("is_time_zero", &fast::OpenFAST::isTimeZero)
         .def("is_dry_run", &fast::OpenFAST::isDryRun);
 }
