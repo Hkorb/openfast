@@ -198,7 +198,10 @@ class OpenFAST {
   bool isTimeZero() { return timeZero; }
   int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
+  int get_globalTurbNo(int iTurbLoc) { return turbineMapProcToGlob[iTurbLoc]; }
   int get_nTurbinesGlob() { return nTurbinesGlob; }
+  int get_nTurbinesProc() { return nTurbinesProc; }
+
 
   float get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
   float get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
@@ -212,6 +215,7 @@ class OpenFAST {
   int get_numForcePts(int iTurbGlob) { return get_numForcePtsLoc(get_localTurbNo(iTurbGlob)); }
 
   void computeTorqueThrust(int iTurGlob, std::vector<double> &  torque, std::vector<double> &  thrust);
+  double computeRotorSpeed(int iTurbGlob);
 
 
   inline

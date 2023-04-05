@@ -714,6 +714,18 @@ void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & to
     }
 }
 
+double fast::OpenFAST::computeRotorSpeed(int iTurbGlob) {
+    int iTurbLoc = get_localTurbNo(iTurbGlob);
+
+    double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+    double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+    
+    double radius = sqrt(y*y+z*z);
+
+    double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
+    return tangential_velocity /  radius;
+}
+
 fast::ActuatorNodeType fast::OpenFAST::getVelNodeType(int iTurbGlob, int iNode) {
     // Return the type of velocity node for the given node number. The node ordering (from FAST) is
     // Node 0 - Hub node
