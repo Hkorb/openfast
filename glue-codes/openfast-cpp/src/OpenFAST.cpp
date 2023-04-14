@@ -149,6 +149,10 @@ void fast::OpenFAST::init() {
                 forceNodeVel[iTurb].resize(nfpts);
                 for (int k = 0; k < nfpts; k++) forceNodeVel[iTurb][k].resize(3) ;
 
+                HubPosition.emplace_back(3, 0.0);
+                HubRotationVelocity.emplace_back(3, 0.0);
+                HubOrientation.emplace_back(9, 0.0);
+
                 if ( isDebug() ) {
                     for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
                         std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ;
@@ -323,6 +327,12 @@ void fast::OpenFAST::step() {
             );
         }
 
+
+        // Update Hub
+        FAST_HubPosition(&iTurb, HubPosition[iTurb].data(), HubRotationVelocity[iTurb].data(), HubOrientation[iTurb].data(), &ErrStat, ErrMsg);
+        checkError(ErrStat, ErrMsg);
+        
+
         if ( isDebug() ) {
             std::ofstream actuatorForcesFile;
             actuatorForcesFile.open("actuator_forces.csv") ;
@@ -384,6 +394,10 @@ void fast::OpenFAST::stepNoWrite() {
         // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
         // (note OpenFOAM could do subcycling around this step)
         FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+        checkError(ErrStat, ErrMsg);
+
+        // Update Hub
+        FAST_HubPosition(&iTurb, HubPosition[iTurb].data(), HubRotationVelocity[iTurb].data(), HubOrientation[iTurb].data(), &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
     }
@@ -721,13 +735,15 @@ void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & to
 double fast::OpenFAST::computeRotorSpeed(int iTurbGlob) {
     int iTurbLoc = get_localTurbNo(iTurbGlob);
 
-    double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
-    double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
-    
-    double radius = sqrt(y*y+z*z);
+    return HubRotationVelocity[iTurbLoc][0];
 
-    double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
-    return tangential_velocity /  radius;
+    // double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+    // double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+    
+    // double radius = sqrt(y*y+z*z);
+
+    // double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
+    // return tangential_velocity /  radius;
 }
 
 
@@ -844,32 +860,7 @@ void fast::OpenFAST::getAllLocalAzimuths(double* azimuths){
 
     for(int iTurbLoc=0; iTurbLoc<nTurbinesProc; iTurbLoc++)
     {
-        int iNode = 0;
-        int nBlades = get_numBladesLoc(iTurbLoc);
-        int nBladeNodes = get_numForcePtsBladeLoc(iTurbLoc);
-        int nTowerNodes = get_numForcePtsTwrLoc(iTurbLoc);
-
-        double avg_azimuth = 0;
-
-        double azimuth_offset = 2*M_PI/double(nBlades);
-
-        double nacelle_coord_y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode];
-        double nacelle_coord_z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode];
-
-        iNode++;
-
-        for(int iBlade = 0; iBlade<nBlades; iBlade++)
-        {
-            double coord_y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] - nacelle_coord_y;
-            double coord_z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] - nacelle_coord_z;
-            double azimuth_per_blade =  atan2(-coord_y, coord_z) - iBlade * azimuth_offset;
-            avg_azimuth += azimuth_per_blade < -M_PI ? azimuth_per_blade + 2*M_PI : azimuth_per_blade;
-            iNode += nBladeNodes;
-        }
-
-        iNode += nTowerNodes;
-
-        azimuths[iTurbLoc] = avg_azimuth/double(nBlades);
+        azimuths[iTurbLoc] = atan2(HubOrientation[iTurbLoc][7], HubOrientation[iTurbLoc][8]);
     }
 }
 
@@ -877,15 +868,16 @@ void fast::OpenFAST::getAllLocalAzimuths(double* azimuths){
 void fast::OpenFAST::getAllLocalRotorSpeeds(double* rotor_speeds){
     for(int iTurbLoc=0; iTurbLoc<nTurbinesProc; iTurbLoc++)
     {
-        int iNode = 0;
+        rotor_speeds[iTurbLoc] = HubRotationVelocity[iTurbLoc][0];
+        // int iNode = 0;
 
-        double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
-        double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+        // double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[1]- cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+        // double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[1]- cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
         
-        double radius = sqrt(y*y+z*z);
+        // double radius = sqrt(y*y+z*z);
 
-        double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
-        rotor_speeds[iTurbLoc] = tangential_velocity /  radius;
+        // double tangential_velocity = hypot(cDriver_Input_from_FAST[iTurbLoc].ydotForce[1],cDriver_Input_from_FAST[iTurbLoc].zdotForce[1] );
+        // rotor_speeds[iTurbLoc] = tangential_velocity /  radius;
     }
 }
 

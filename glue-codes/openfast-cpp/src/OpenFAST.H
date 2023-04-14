@@ -93,6 +93,9 @@ class OpenFAST {
   double tMax;
   std::vector<std::vector<float> > TurbineBasePos;
   std::vector<std::vector<float> > TurbineHubPos;
+  std::vector<std::vector<float>> HubPosition;
+  std::vector<std::vector<float>> HubRotationVelocity;
+  std::vector<std::vector<double>> HubOrientation;
   std::vector<int> TurbID;
   std::vector<std::string > FASTInputFileName;
   std::vector<std::string > CheckpointFileRoot;
