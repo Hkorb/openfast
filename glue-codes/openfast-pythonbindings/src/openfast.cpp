@@ -27,7 +27,7 @@ void set_velocities(
     py::array_t<double> blade_velocities_x, py::array_t<double> blade_velocities_y, py::array_t<double> blade_velocities_z, 
     py::array_t<double> tower_velocities_x, py::array_t<double> tower_velocities_y, py::array_t<double> tower_velocities_z) 
 {
-    self.setAllLocalVelocities( 
+    self.setAllLocalVelocitiesFromBladeFrame( 
         convert_to_pointer(nacelle_velocities), 
         convert_to_pointer(blade_velocities_x), convert_to_pointer(blade_velocities_y), convert_to_pointer(blade_velocities_z), 
         convert_to_pointer(tower_velocities_x), convert_to_pointer(tower_velocities_y), convert_to_pointer(tower_velocities_z));
@@ -40,7 +40,7 @@ void get_forces(
     py::array_t<double> blade_forces_x, py::array_t<double> blade_forces_y, py::array_t<double> blade_forces_z, 
     py::array_t<double> tower_forces_x, py::array_t<double> tower_forces_y, py::array_t<double> tower_forces_z) 
 {
-    self.getAllLocalForces( 
+    self.getAllLocalForcesInBladeFrame( 
         convert_to_pointer(nacelle_forces), 
         convert_to_pointer(blade_forces_x), convert_to_pointer(blade_forces_y), convert_to_pointer(blade_forces_z), 
         convert_to_pointer(tower_forces_x), convert_to_pointer(tower_forces_y), convert_to_pointer(tower_forces_z));
@@ -52,7 +52,7 @@ void get_coordinates(
     py::array_t<double> blade_coordinates_x, py::array_t<double> blade_coordinates_y, py::array_t<double> blade_coordinates_z, 
     py::array_t<double> tower_coordinates_x, py::array_t<double> tower_coordinates_y, py::array_t<double> tower_coordinates_z) 
 {
-    self.getAllLocalCoordinates( 
+    self.getAllLocalCoordinatesInBladeFrame( 
         convert_to_pointer(nacelle_coordinates), 
         convert_to_pointer(blade_coordinates_x), convert_to_pointer(blade_coordinates_y), convert_to_pointer(blade_coordinates_z), 
         convert_to_pointer(tower_coordinates_x), convert_to_pointer(tower_coordinates_y), convert_to_pointer(tower_coordinates_z));
