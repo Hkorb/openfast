@@ -25,12 +25,16 @@ void set_velocities(
     fast::OpenFAST& self, 
     py::array_t<double> nacelle_velocities, 
     py::array_t<double> blade_velocities_x, py::array_t<double> blade_velocities_y, py::array_t<double> blade_velocities_z, 
-    py::array_t<double> tower_velocities_x, py::array_t<double> tower_velocities_y, py::array_t<double> tower_velocities_z) 
+    py::array_t<double> tower_velocities_x, py::array_t<double> tower_velocities_y, py::array_t<double> tower_velocities_z,
+    py::array_t<double> radii, py::array_t<double> heights) 
 {
+    int numberOfExternBladeNodes = radii.shape()[0];
+    int numberOfExternTowerNodes = heights.shape()[0];
     self.setAllLocalVelocitiesFromBladeFrame( 
         convert_to_pointer(nacelle_velocities), 
         convert_to_pointer(blade_velocities_x), convert_to_pointer(blade_velocities_y), convert_to_pointer(blade_velocities_z), 
-        convert_to_pointer(tower_velocities_x), convert_to_pointer(tower_velocities_y), convert_to_pointer(tower_velocities_z));
+        convert_to_pointer(tower_velocities_x), convert_to_pointer(tower_velocities_y), convert_to_pointer(tower_velocities_z),
+        convert_to_pointer(radii), numberOfExternBladeNodes, convert_to_pointer(heights), numberOfExternTowerNodes);
 }
 
 
@@ -38,24 +42,32 @@ void get_forces(
     fast::OpenFAST& self, 
     py::array_t<double> nacelle_forces, 
     py::array_t<double> blade_forces_x, py::array_t<double> blade_forces_y, py::array_t<double> blade_forces_z, 
-    py::array_t<double> tower_forces_x, py::array_t<double> tower_forces_y, py::array_t<double> tower_forces_z) 
+    py::array_t<double> tower_forces_x, py::array_t<double> tower_forces_y, py::array_t<double> tower_forces_z,
+    py::array_t<double> radii) 
 {
+    int numberOfInputNodes = radii.shape()[0];
+
     self.getAllLocalForcesInBladeFrame( 
         convert_to_pointer(nacelle_forces), 
         convert_to_pointer(blade_forces_x), convert_to_pointer(blade_forces_y), convert_to_pointer(blade_forces_z), 
-        convert_to_pointer(tower_forces_x), convert_to_pointer(tower_forces_y), convert_to_pointer(tower_forces_z));
+        convert_to_pointer(tower_forces_x), convert_to_pointer(tower_forces_y), convert_to_pointer(tower_forces_z),
+        convert_to_pointer(radii), numberOfInputNodes);
 }
 
 void get_coordinates(
     fast::OpenFAST& self, 
     py::array_t<double> nacelle_coordinates, 
     py::array_t<double> blade_coordinates_x, py::array_t<double> blade_coordinates_y, py::array_t<double> blade_coordinates_z, 
-    py::array_t<double> tower_coordinates_x, py::array_t<double> tower_coordinates_y, py::array_t<double> tower_coordinates_z) 
+    py::array_t<double> tower_coordinates_x, py::array_t<double> tower_coordinates_y, py::array_t<double> tower_coordinates_z,
+    py::array_t<double> radii) 
 {
+    int numberOfInputNodes = radii.shape()[0];
+
     self.getAllLocalCoordinatesInBladeFrame( 
         convert_to_pointer(nacelle_coordinates), 
         convert_to_pointer(blade_coordinates_x), convert_to_pointer(blade_coordinates_y), convert_to_pointer(blade_coordinates_z), 
-        convert_to_pointer(tower_coordinates_x), convert_to_pointer(tower_coordinates_y), convert_to_pointer(tower_coordinates_z));
+        convert_to_pointer(tower_coordinates_x), convert_to_pointer(tower_coordinates_y), convert_to_pointer(tower_coordinates_z),
+        convert_to_pointer(radii), numberOfInputNodes);
 }
 
 
@@ -143,9 +155,9 @@ PYBIND11_MODULE(bindings, m) {
         .def("step_no_write", &fast::OpenFAST::stepNoWrite)
         .def("end", &fast::OpenFAST::end)
         .def("calc_nacelle_force", &fast::OpenFAST::calc_nacelle_force, py::arg("u"), py::arg("v"), py::arg("w"), py::arg("cd"), py::arg("area"), py::arg("rho"), py::arg("fx"), py::arg("fy"), py::arg("fz"))
-        .def("set_velocities", &set_velocities, py::arg("nacelle_velocities"), py::arg("blade_velocities_x"), py::arg("blade_velocities_y"), py::arg("blade_velocities_z"), py::arg("tower_velocities_x"), py::arg("tower_velocities_y"), py::arg("tower_velocities_z"))
-        .def("get_forces", &get_forces, py::arg("nacelle_forces"), py::arg("blade_forces_x"), py::arg("blade_forces_y"), py::arg("blade_forces_z"), py::arg("tower_forces_x"), py::arg("tower_forces_y"), py::arg("tower_forces_z"))
-        .def("get_coordinates", &get_coordinates, py::arg("nacelle_coordinates"), py::arg("blade_coordinates_x"), py::arg("blade_coordinates_y"), py::arg("blade_coordinates_z"), py::arg("tower_coordinates_x"), py::arg("tower_coordinates_y"), py::arg("tower_coordinates_z"))
+        .def("set_velocities", &set_velocities, py::arg("nacelle_velocities"), py::arg("blade_velocities_x"), py::arg("blade_velocities_y"), py::arg("blade_velocities_z"), py::arg("tower_velocities_x"), py::arg("tower_velocities_y"), py::arg("tower_velocities_z"), py::arg("radii"), py::arg("heights"))
+        .def("get_forces", &get_forces, py::arg("nacelle_forces"), py::arg("blade_forces_x"), py::arg("blade_forces_y"), py::arg("blade_forces_z"), py::arg("tower_forces_x"), py::arg("tower_forces_y"), py::arg("tower_forces_z"), py::arg("radii"))
+        .def("get_coordinates", &get_coordinates, py::arg("nacelle_coordinates"), py::arg("blade_coordinates_x"), py::arg("blade_coordinates_y"), py::arg("blade_coordinates_z"), py::arg("tower_coordinates_x"), py::arg("tower_coordinates_y"), py::arg("tower_coordinates_z"), py::arg("radii"))
         .def("interpolate_velocity_at_force_nodes_to_velocity_nodes", &fast::OpenFAST::interpolateVel_ForceToVelNodes)
         .def("allocate_turbines_to_procs_simple", &fast::OpenFAST::allocateTurbinesToProcsSimple)
         .def("compute_torque_thrust", [](fast::OpenFAST& self, py::array_t<double> torque, py::array_t<double> thrust)
