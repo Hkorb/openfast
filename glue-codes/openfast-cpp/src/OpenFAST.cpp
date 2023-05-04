@@ -803,7 +803,7 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
         cDriver_Output_to_FAST[iTurbLoc].w[0] = nacelle_velocities[3*iTurbLoc+2];
 
         int nBladeVelocityNodes = get_numVelPtsBladeLoc(iTurbLoc);
-        int nBlades = get_numBlades(iTurbLoc);
+        int nBlades = get_numBladesLoc(iTurbLoc);
 
         double azimuth = computeAzimuthLoc(iTurbLoc);
         double rotor_speed = computeRotorSpeedLoc(iTurbLoc);
@@ -815,7 +815,9 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
             double s = sin(localAzimuth);
             double c = cos(localAzimuth);
 
-            double originVel[3] = {cDriver_Input_from_FAST[iTurbLoc].pxVel[0], cDriver_Input_from_FAST[iTurbLoc].pyVel[0], cDriver_Input_from_FAST[iTurbLoc].pzVel[0]};
+            double originVel[3] = {cDriver_Input_from_FAST[iTurbLoc].pxVel[0],
+                                   cDriver_Input_from_FAST[iTurbLoc].pyVel[0],
+                                   cDriver_Input_from_FAST[iTurbLoc].pzVel[0]};
 
             for(int j=0; j < nBladeVelocityNodes; j++) {
                 int iNodeVel = 1 + iBlade * nBladeVelocityNodes + j ; //Assumes the same number of velocity (Aerodyn) nodes for all blades
@@ -834,17 +836,17 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
                 double radius_higher = radii[jExternLower+1];
 
                 double rInterp = (rDistVel - radius_lower)/(radius_higher-radius_lower);
-                rInterp = std::max(0.0, std::min(1.0, rInterp));
 
                 double u_interp = (1.f - rInterp) * blade_velocities_x[iNodeExternLower] + rInterp * blade_velocities_x[iNodeExternLower+1];
-                double v_interp = (1.f - rInterp) * (blade_velocities_y[iNodeExternLower] - radius_lower * rotor_speed) + rInterp * (blade_velocities_y[iNodeExternLower+1] - radius_higher*rotor_speed);
+                double v_interp = (1.f - rInterp) * blade_velocities_y[iNodeExternLower] + rInterp * blade_velocities_y[iNodeExternLower+1] - rotor_speed * rDistVel;
                 double w_interp = (1.f - rInterp) * blade_velocities_z[iNodeExternLower] + rInterp * blade_velocities_z[iNodeExternLower+1];
+
                 cDriver_Output_to_FAST[iTurbLoc].u[iNodeVel] = u_interp;
                 cDriver_Output_to_FAST[iTurbLoc].v[iNodeVel] = c*v_interp - s*w_interp;
                 cDriver_Output_to_FAST[iTurbLoc].w[iNodeVel] = s*v_interp + c*w_interp;
 
-                // printf(" Blade %d, Vel node %d / %d, u_interp %f, v_interp %f, w_interp %f \n", 
-                //          iBlade, j, nBladeVelocityNodes, u_interp, v_interp, w_interp);
+                // printf(" Blade %d, Vel node %d / %d, u_interp %f, v_interp %f, w_interp %f v %f w %f \n", 
+                //          iBlade, j, nBladeVelocityNodes, u_interp, v_tmp, w_interp, c*v_tmp - s*w_interp, s*v_tmp + c*w_interp);
             }
         }
         
@@ -852,25 +854,27 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
         int nVelPtsTower = get_numVelPtsTwrLoc(iTurbLoc) - 1; // Not sure why but there seems to be 1 to many nodes in the tower
         if ( nVelPtsTower <= 0 ) continue;
 
-        int iNodeBotTowerVel = 1 + nBlades * get_numVelPtsBladeLoc(iTurbLoc); // Assumes the same number of velocity (Aerodyn) nodes for all blades
+        int iNodeBotTowerVel = 1 + nBlades * nBladeVelocityNodes; // Assumes the same number of velocity (Aerodyn) nodes for all blades
+        double originVel[3] = {cDriver_Input_from_FAST[iTurbLoc].pxVel[iNodeBotTowerVel],
+                               cDriver_Input_from_FAST[iTurbLoc].pyVel[iNodeBotTowerVel],
+                               cDriver_Input_from_FAST[iTurbLoc].pzVel[iNodeBotTowerVel]};
+
         for(int j=0; j < nVelPtsTower; j++) {
             int iNodeVel = iNodeBotTowerVel + j ;
 
-            double x = cDriver_Input_from_FAST[iTurbLoc].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurbLoc].pxVel[iNodeBotTowerVel];
-            double y = cDriver_Input_from_FAST[iTurbLoc].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurbLoc].pyVel[iNodeBotTowerVel];
-            double z = cDriver_Input_from_FAST[iTurbLoc].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurbLoc].pzVel[iNodeBotTowerVel];
+            double x = cDriver_Input_from_FAST[iTurbLoc].pxVel[iNodeVel] - originVel[0];
+            double y = cDriver_Input_from_FAST[iTurbLoc].pyVel[iNodeVel] - originVel[1];
+            double z = cDriver_Input_from_FAST[iTurbLoc].pzVel[iNodeVel] - originVel[2];
             double hDistVel = std::sqrt(x*x + y*y + z*z);
 
             int jExternLower = findNextLowerIndex(heights, numberOfExternTowerHeights, hDistVel);
             int iNodeExternLower =  iNodeExternLower + numberOfExternTowerHeights * iTurbLoc;
 
             double rInterp = (hDistVel - heights[jExternLower])/(heights[jExternLower+1]-heights[jExternLower]);
-            rInterp = std::max(0.0, std::min(1.0, rInterp));
 
             cDriver_Output_to_FAST[iTurbLoc].u[iNodeVel] = (1.0f - rInterp) * tower_velocities_x[iNodeExternLower] + rInterp * tower_velocities_x[iNodeExternLower+1];
             cDriver_Output_to_FAST[iTurbLoc].v[iNodeVel] = (1.0f - rInterp) * tower_velocities_y[iNodeExternLower] + rInterp * tower_velocities_y[iNodeExternLower+1];
             cDriver_Output_to_FAST[iTurbLoc].w[iNodeVel] = (1.0f - rInterp) * tower_velocities_z[iNodeExternLower] + rInterp * tower_velocities_z[iNodeExternLower+1];
-
         }
         
     }
@@ -926,6 +930,9 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
         double azimuth = computeAzimuthLoc(iTurbLoc);
 
         std::vector<double> forceNodeRadii(nForceNodesBlade);
+        std::vector<double> lineForcesX(nForceNodesBlade);
+        std::vector<double> lineForcesY(nForceNodesBlade);
+        std::vector<double> lineForcesZ(nForceNodesBlade);
         
         double originForce[3] = {cDriver_Input_from_FAST[iTurbLoc].pxForce[0], 
                                  cDriver_Input_from_FAST[iTurbLoc].pyForce[0], 
@@ -939,9 +946,32 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
                 double x = cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode] - originForce[0];
                 double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] - originForce[1];
                 double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] - originForce[2];
+
+                // printf("i %d, x: %f, y: %f, z: %f fx %f fy %f fz %f\n", iNode, x, y, z, cDriver_Input_from_FAST[iTurbLoc].fx[iNode], cDriver_Input_from_FAST[iTurbLoc].fy[iNode], cDriver_Input_from_FAST[iTurbLoc].fz[iNode]);
                 forceNodeRadii[iForceNode] = std::sqrt(x*x + y*y + z*z);
             }
 
+            lineForcesX[0] = cDriver_Input_from_FAST[iTurbLoc].fx[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+            lineForcesY[0] = cDriver_Input_from_FAST[iTurbLoc].fy[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+            lineForcesZ[0] = cDriver_Input_from_FAST[iTurbLoc].fz[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+
+            for(int iForceNode=1; iForceNode<nForceNodesBlade-1; iForceNode++ )
+            {
+                int iNode = iForceNode + iBlade*nForceNodesBlade + 1;
+                double fx = cDriver_Input_from_FAST[iTurbLoc].fx[iNode];
+                double fy = cDriver_Input_from_FAST[iTurbLoc].fy[iNode];
+                double fz = cDriver_Input_from_FAST[iTurbLoc].fz[iNode];
+
+                double dr = 0.5*(forceNodeRadii[iForceNode+1] - forceNodeRadii[iForceNode-1]);
+
+                lineForcesX[iForceNode] = fx/dr;
+                lineForcesY[iForceNode] = fy/dr;
+                lineForcesZ[iForceNode] = fz/dr;
+            }
+            
+            lineForcesX[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fx[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
+            lineForcesY[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fy[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
+            lineForcesZ[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fz[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
 
             double localAzimuth = azimuth + (double)iBlade/(double)nBlades * 2.f*M_PI;
             double s = sin(localAzimuth);
@@ -952,27 +982,24 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
 
                 int jForceLower = findNextLowerIndex(forceNodeRadii.data(), nForceNodesBlade, radius);
                 double rInterp = (radius - forceNodeRadii[jForceLower])/(forceNodeRadii[jForceLower+1] - forceNodeRadii[jForceLower]);
-                rInterp = std::max(0.0, std::min(1.0, rInterp));
-                int iForceNode = iBlade*nForceNodesBlade + jForceLower + 1;
-                double fx_lower = cDriver_Input_from_FAST[iTurbLoc].fx[iForceNode];
-                double fy_lower = cDriver_Input_from_FAST[iTurbLoc].fy[iForceNode];
-                double fx_higher = cDriver_Input_from_FAST[iTurbLoc].fx[iForceNode+1];
-                double fy_higher = cDriver_Input_from_FAST[iTurbLoc].fy[iForceNode+1];
+                int iForceNode = jForceLower + iBlade*nForceNodesBlade + 1;
 
-                double interp_fx = (1.0-rInterp)*cDriver_Input_from_FAST[iTurbLoc].fx[iForceNode] + rInterp*cDriver_Input_from_FAST[iTurbLoc].fx[iForceNode+1];
-                double interp_fy = (1.0-rInterp)*cDriver_Input_from_FAST[iTurbLoc].fy[iForceNode] + rInterp*cDriver_Input_from_FAST[iTurbLoc].fy[iForceNode+1];
-                double interp_fz = (1.0-rInterp)*cDriver_Input_from_FAST[iTurbLoc].fz[iForceNode] + rInterp*cDriver_Input_from_FAST[iTurbLoc].fz[iForceNode+1];
+                double interp_fx = (1.0-rInterp)*lineForcesX[jForceLower] + rInterp*lineForcesX[jForceLower+1];
+                double interp_fy = (1.0-rInterp)*lineForcesY[jForceLower] + rInterp*lineForcesY[jForceLower+1];
+                double interp_fz = (1.0-rInterp)*lineForcesZ[jForceLower] + rInterp*lineForcesZ[jForceLower+1];
 
                 double fy = interp_fy*c+interp_fz*s;
                 double fz = -interp_fy*s+interp_fz*c;
+                // printf("iBladeNode: %d, iForceNode: %d, iExternNode: %d, radius: %f, r %f, interp_fx: %f, interp_fy: %f, interp_fz: %f \n", iBladeNode, iForceNode, iExternBladeNode, radius, rInterp, interp_fx, fy, fz);
+
                 blade_forces_x[iExternBladeNode] =  interp_fx;
                 blade_forces_y[iExternBladeNode] =  interp_fy*c+interp_fz*s; 
                 blade_forces_z[iExternBladeNode] = -interp_fy*s+interp_fz*c; 
                 iExternBladeNode++;
             }
 
-        //TODO add tower forces
         }
+        //TODO add tower forces
     }
 }
 
@@ -1054,7 +1081,6 @@ void fast::OpenFAST::getAllLocalCoordinatesInBladeFrame(double* nacelle_coordina
                 int jForceLower = findNextLowerIndex(forceNodeRadii.data(), nForceNodesBlade, radius);
 
                 double rInterp = (radius - forceNodeRadii[jForceLower])/(forceNodeRadii[jForceLower+1] - forceNodeRadii[jForceLower]);
-                rInterp = std::max(0.0, std::min(1.0, rInterp));
 
                 int iForceNode = iBlade*nForceNodesBlade + jForceLower + 1;
                 double interp_x = (1.0-rInterp)*cDriver_Input_from_FAST[iTurbLoc].pxForce[iForceNode] + rInterp*cDriver_Input_from_FAST[iTurbLoc].pxForce[iForceNode+1] - originForce[0];
