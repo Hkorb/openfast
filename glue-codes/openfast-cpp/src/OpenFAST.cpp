@@ -114,6 +114,11 @@ void fast::OpenFAST::init() {
             // this calls the Init() routines of each module
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+                int nodeClusterType = 0;
+                if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                {
+                    nodeClusterType = 1;
+                }
                 std::copy(
                     FASTInputFileName[iTurb].data(),
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
@@ -136,6 +141,7 @@ void fast::OpenFAST::init() {
                     &dtFAST,
                     &numBlades[iTurb],
                     &numVelPtsBlade[iTurb],
+                    &nodeClusterType,
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
                     &sc.ip_from_FAST[iTurb],
@@ -182,6 +188,11 @@ void fast::OpenFAST::init() {
         //     }
             
         //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+                // int nodeClusterType = 0;
+                // if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                // {
+                //     nodeClusterType = 1;
+                // }
         //         std::copy(
         //             FASTInputFileName[iTurb].data(),
         //             FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
@@ -204,6 +215,7 @@ void fast::OpenFAST::init() {
         //             &dtFAST,
         //             &numBlades[iTurb],
         //             &numVelPtsBlade[iTurb],
+                    &nodeClusterType,
         //             &cDriver_Input_from_FAST[iTurb],
         //             &cDriver_Output_to_FAST[iTurb],
         //             &sc.ip_from_FAST[iTurb],
@@ -1212,6 +1224,7 @@ void fast::OpenFAST::allocateMemory() {
     nacelle_area.resize(nTurbinesProc);
     air_density.resize(nTurbinesProc);
     numBlades.resize(nTurbinesProc);
+    forcePtsBladeDistributionType.resize(nTurbinesProc);
     numForcePtsBlade.resize(nTurbinesProc);
     numForcePtsTwr.resize(nTurbinesProc);
     numVelPtsBlade.resize(nTurbinesProc);
@@ -1229,6 +1242,7 @@ void fast::OpenFAST::allocateMemory() {
         for(int i=0;i<3;i++) {
             TurbineBasePos[iTurb][i] = globTurbineData[globProc].TurbineBasePos[i];
         }
+        forcePtsBladeDistributionType[iTurb] =  globTurbineData[globProc].forcePtsBladeDistributionType;
         numForcePtsBlade[iTurb] = globTurbineData[globProc].numForcePtsBlade;
         numForcePtsTwr[iTurb] = globTurbineData[globProc].numForcePtsTwr;
         nacelle_cd[iTurb] = globTurbineData[globProc].nacelle_cd;
@@ -1242,7 +1256,7 @@ void fast::OpenFAST::allocateMemory() {
     // Allocate memory for OpFM Input types in FAST
     cDriver_Input_from_FAST.resize(nTurbinesProc) ;
     cDriver_Output_to_FAST.resize(nTurbinesProc) ;
-    
+
     if(scStatus) {
         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
         // scio.from_SC.resize(nTurbinesProc);
