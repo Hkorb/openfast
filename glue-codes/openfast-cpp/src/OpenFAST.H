@@ -10,13 +10,13 @@
 #include <map>
 #include "dlfcn.h"
 //TODO: The skip MPICXX is put in place primarily to get around errors in OpenFOAM. This will cause problems if the driver program uses C++ API for MPI.
-#ifndef OMPI_SKIP_MPICXX
- #define OMPI_SKIP_MPICXX
-#endif
-#ifndef MPICH_SKIP_MPICXX
- #define MPICH_SKIP_MPICXX
-#endif
-#include "mpi.h"
+// #ifndef OMPI_SKIP_MPICXX
+//  #define OMPI_SKIP_MPICXX
+// #endif
+// #ifndef MPICH_SKIP_MPICXX
+//  #define MPICH_SKIP_MPICXX
+// #endif
+// #include "mpi.h"
 #include "SC.h"
 
 
@@ -54,7 +54,7 @@ class fastInputs {
 
  public:
 
-  MPI_Comm comm;
+  // MPI_Comm comm;
   int nTurbinesGlob;
   bool dryRun;
   bool debug;
@@ -81,7 +81,7 @@ class OpenFAST {
 
  private:
 
-  MPI_Comm mpiComm;
+  // MPI_Comm mpiComm;
   bool dryRun;        // If this is true, class will simply go through allocation and deallocation of turbine data
   bool debug;   // Write out extra information if this flags is turned on
   std::vector<globTurbineDataType> globTurbineData;
@@ -114,7 +114,7 @@ class OpenFAST {
 
   std::vector<std::vector<std::vector<double> > > forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
   std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)
-  hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
+  // hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
 
   std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
   std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
@@ -131,13 +131,13 @@ class OpenFAST {
   SuperController sc;
   scInitOutData scio;
 
-  int fastMPIGroupSize;
-  MPI_Group fastMPIGroup;
-  MPI_Comm  fastMPIComm;
-  int fastMPIRank;
+  // int fastMPIGroupSize;
+  // MPI_Group fastMPIGroup;
+  // MPI_Comm  fastMPIComm;
+  // int fastMPIRank;
 
-  MPI_Group worldMPIGroup;
-  int worldMPIRank;
+  // MPI_Group worldMPIGroup;
+  // int worldMPIRank;
 
   static int AbortErrLev;
   int ErrStat;
@@ -170,11 +170,11 @@ class OpenFAST {
                           float & fy,
                           float & fz);
 
-  hid_t openVelocityDataFile(bool createFile);
-  void readVelocityData(int nTimesteps);
-  void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
-  herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
-  void backupVelocityDataFile(int curTimeStep, hid_t & velDataFile);
+  // hid_t openVelocityDataFile(bool createFile);
+  // void readVelocityData(int nTimesteps);
+  // void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
+  // herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
+  // void backupVelocityDataFile(int curTimeStep, hid_t & velDataFile);
 
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();

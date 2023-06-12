@@ -23,7 +23,7 @@ enable_language(CXX Fortran)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(MPI REQUIRED)
+# find_package(MPI REQUIRED)
 find_package(LibXml2 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C HL)
@@ -37,7 +37,7 @@ include_directories(${LIBXML2_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)
 include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
 include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
-include_directories(${MPI_INCLUDE_PATH})
+# include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
   src/OpenFAST.cpp 
@@ -118,7 +118,7 @@ target_link_libraries(openfastcpplib
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
-  ${MPI_LIBRARIES}
+  # ${MPI_LIBRARIES}
   ${CMAKE_DL_LIBS}
   ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
 )
@@ -126,7 +126,7 @@ target_link_libraries(openfastcpplib
 add_executable(openfastcpp src/FAST_Prog.cpp)
 target_link_libraries(openfastcpp 
   openfastcpplib
-  ${MPI_LIBRARIES}
+  # ${MPI_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
@@ -143,15 +143,15 @@ if (OPENMP)
   endif()
 endif(OPENMP)
 
-if(MPI_COMPILE_FLAGS)
-  set_target_properties(openfastcpp PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-endif(MPI_COMPILE_FLAGS)
+# if(MPI_COMPILE_FLAGS)
+#   set_target_properties(openfastcpp PROPERTIES
+#     COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+# endif(MPI_COMPILE_FLAGS)
 
-if(MPI_LINK_FLAGS)
-  set_target_properties(openfastcpp PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
-endif(MPI_LINK_FLAGS)
+# if(MPI_LINK_FLAGS)
+#   set_target_properties(openfastcpp PROPERTIES
+#     LINK_FLAGS "${MPI_LINK_FLAGS}")
+# endif(MPI_LINK_FLAGS)
 
 set_property(TARGET openfastcpp PROPERTY LINKER_LANGUAGE CXX)
 

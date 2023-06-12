@@ -61,46 +61,46 @@ void fast::OpenFAST::init() {
     if (!dryRun) {
         switch (simStart) {
 
-        case fast::trueRestart:
+        // case fast::trueRestart:
 
-            for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                /* note that this will set nt_global inside the FAST library */
-                std::copy(
-                    CheckpointFileRoot[iTurb].data(),
-                    CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
-                    currentFileName
-                );
-                FAST_OpFM_Restart(
-                    &iTurb,
-                    currentFileName,
-                    &AbortErrLev,
-                    &dtFAST,
-                    &numBlades[iTurb],
-                    &numVelPtsBlade[iTurb],
-                    &ntStart,
-                    &cDriver_Input_from_FAST[iTurb],
-                    &cDriver_Output_to_FAST[iTurb],
-                    &sc.ip_from_FAST[iTurb],
-                    &sc.op_to_FAST[iTurb],
-                    &ErrStat,
-                    ErrMsg
-                );
-                checkError(ErrStat, ErrMsg);
-                nt_global = ntStart;
+        //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        //         /* note that this will set nt_global inside the FAST library */
+        //         std::copy(
+        //             CheckpointFileRoot[iTurb].data(),
+        //             CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
+        //             currentFileName
+        //         );
+        //         FAST_OpFM_Restart(
+        //             &iTurb,
+        //             currentFileName,
+        //             &AbortErrLev,
+        //             &dtFAST,
+        //             &numBlades[iTurb],
+        //             &numVelPtsBlade[iTurb],
+        //             &ntStart,
+        //             &cDriver_Input_from_FAST[iTurb],
+        //             &cDriver_Output_to_FAST[iTurb],
+        //             &sc.ip_from_FAST[iTurb],
+        //             &sc.op_to_FAST[iTurb],
+        //             &ErrStat,
+        //             ErrMsg
+        //         );
+        //         checkError(ErrStat, ErrMsg);
+        //         nt_global = ntStart;
 
-                int nfpts = get_numForcePtsLoc(iTurb);
-                forceNodeVel[iTurb].resize(nfpts);
-                for (int k = 0; k < nfpts; k++) forceNodeVel[iTurb][k].resize(3) ;
-            }
+        //         int nfpts = get_numForcePtsLoc(iTurb);
+        //         forceNodeVel[iTurb].resize(nfpts);
+        //         for (int k = 0; k < nfpts; k++) forceNodeVel[iTurb][k].resize(3) ;
+        //     }
 
-            if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
+        //     // if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
 
-            if(scStatus) {
-                std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-                //sc.readRestartFile(nt_global);
-            }
+        //     if(scStatus) {
+        //         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        //         //sc.readRestartFile(nt_global);
+        //     }
 
-            break ;
+        //     break ;
 
         case fast::init:
 
@@ -168,90 +168,90 @@ void fast::OpenFAST::init() {
                 }
             }
 
-            if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(true);
+            // if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(true);
 
             break ;
 
-        case fast::restartDriverInitFAST:
+        // case fast::restartDriverInitFAST:
 
-            sc.init(scio, nTurbinesProc);
-            if(scStatus) {
-                std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-                // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
-                // sc.calcOutputs_n(0.0);
-            }
+        //     sc.init(scio, nTurbinesProc);
+        //     if(scStatus) {
+        //         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+        //         // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
+        //         // sc.calcOutputs_n(0.0);
+        //     }
             
-            for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                std::copy(
-                    FASTInputFileName[iTurb].data(),
-                    FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
-                    currentFileName
-                );
-                FAST_OpFM_Init(
-                    &iTurb,
-                    &tMax,
-                    currentFileName,
-                    &TurbID[iTurb],
-                    &scio.nSC2CtrlGlob, 
-                    &scio.nSC2Ctrl, 
-                    &scio.nCtrl2SC,
-                    scio.from_SCglob.data(), 
-                    scio.from_SC[iTurb].data(),
-                    &numForcePtsBlade[iTurb],
-                    &numForcePtsTwr[iTurb],
-                    TurbineBasePos[iTurb].data(),
-                    &AbortErrLev,
-                    &dtFAST,
-                    &numBlades[iTurb],
-                    &numVelPtsBlade[iTurb],
-                    &cDriver_Input_from_FAST[iTurb],
-                    &cDriver_Output_to_FAST[iTurb],
-                    &sc.ip_from_FAST[iTurb],
-                    &sc.op_to_FAST[iTurb],
-                    &ErrStat,
-                    ErrMsg
-                );
-                checkError(ErrStat, ErrMsg);
+        //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        //         std::copy(
+        //             FASTInputFileName[iTurb].data(),
+        //             FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
+        //             currentFileName
+        //         );
+        //         FAST_OpFM_Init(
+        //             &iTurb,
+        //             &tMax,
+        //             currentFileName,
+        //             &TurbID[iTurb],
+        //             &scio.nSC2CtrlGlob, 
+        //             &scio.nSC2Ctrl, 
+        //             &scio.nCtrl2SC,
+        //             scio.from_SCglob.data(), 
+        //             scio.from_SC[iTurb].data(),
+        //             &numForcePtsBlade[iTurb],
+        //             &numForcePtsTwr[iTurb],
+        //             TurbineBasePos[iTurb].data(),
+        //             &AbortErrLev,
+        //             &dtFAST,
+        //             &numBlades[iTurb],
+        //             &numVelPtsBlade[iTurb],
+        //             &cDriver_Input_from_FAST[iTurb],
+        //             &cDriver_Output_to_FAST[iTurb],
+        //             &sc.ip_from_FAST[iTurb],
+        //             &sc.op_to_FAST[iTurb],
+        //             &ErrStat,
+        //             ErrMsg
+        //         );
+        //         checkError(ErrStat, ErrMsg);
 
-                timeZero = true;
+        //         timeZero = true;
 
-                numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
-                if(numVelPtsTwr[iTurb] == 0) {
-                    numForcePtsTwr[iTurb] = 0;
-                    std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
-                }
+        //         numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
+        //         if(numVelPtsTwr[iTurb] == 0) {
+        //             numForcePtsTwr[iTurb] = 0;
+        //             std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
+        //         }
 
-                int nfpts = get_numForcePtsLoc(iTurb);
-                forceNodeVel[iTurb].resize(nfpts);
-                for (int k = 0; k < nfpts; k++) forceNodeVel[iTurb][k].resize(3) ;
+        //         int nfpts = get_numForcePtsLoc(iTurb);
+        //         forceNodeVel[iTurb].resize(nfpts);
+        //         for (int k = 0; k < nfpts; k++) forceNodeVel[iTurb][k].resize(3) ;
 
-                if ( isDebug() ) {
-                    for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
-                        std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ;
-                    }
-                }
-            }
+        //         if ( isDebug() ) {
+        //             for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
+        //                 std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ;
+        //             }
+        //         }
+        //     }
 
-            int nTimesteps;
+        //     int nTimesteps;
 
-            if (nTurbinesProc > 0) {
-                readVelocityData(ntStart);
-            }
-            for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                applyVelocityData(0, iTurb, cDriver_Output_to_FAST[iTurb], velNodeData[iTurb]);
-            }
-            solution0() ;
+        //     if (nTurbinesProc > 0) {
+        //         readVelocityData(ntStart);
+        //     }
+        //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        //         applyVelocityData(0, iTurb, cDriver_Output_to_FAST[iTurb], velNodeData[iTurb]);
+        //     }
+        //     solution0() ;
 
-            for (int iPrestart=0 ; iPrestart < ntStart; iPrestart++) {
-                for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                    applyVelocityData(iPrestart, iTurb, cDriver_Output_to_FAST[iTurb], velNodeData[iTurb]);
-                }
-                stepNoWrite();
-            }
+            // for (int iPrestart=0 ; iPrestart < ntStart; iPrestart++) {
+            //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+            //         applyVelocityData(iPrestart, iTurb, cDriver_Output_to_FAST[iTurb], velNodeData[iTurb]);
+            //     }
+            //     stepNoWrite();
+            // }
 
-            if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
+            // if (nTurbinesProc > 0) velNodeDataFile = openVelocityDataFile(false);
 
-            break;
+            // break;
 
         case fast::simStartType_END:
 
@@ -307,7 +307,7 @@ void fast::OpenFAST::step() {
         // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
         // (note OpenFOAM could do subcycling around this step)
 
-        writeVelocityData(velNodeDataFile, iTurb, nt_global, cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
+        // writeVelocityData(velNodeDataFile, iTurb, nt_global, cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
         if ( isDebug() ) {
 
@@ -370,26 +370,26 @@ void fast::OpenFAST::step() {
         // sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
     }
 
-    if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
-        // Use default FAST naming convention for checkpoint file
-        // <RootName>.<nt_global>
-        char dummyCheckPointRoot[INTERFACE_STRING_LENGTH] = " ";
-        // Ensure that we have a null character
-        dummyCheckPointRoot[1] = 0;
+    // if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
+    //     // Use default FAST naming convention for checkpoint file
+    //     // <RootName>.<nt_global>
+    //     char dummyCheckPointRoot[INTERFACE_STRING_LENGTH] = " ";
+    //     // Ensure that we have a null character
+    //     dummyCheckPointRoot[1] = 0;
 
-        if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
+    //     if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
 
-        for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            FAST_CreateCheckpoint(&iTurb, dummyCheckPointRoot, &ErrStat, ErrMsg);
-            checkError(ErrStat, ErrMsg);
-        }
-        if(scStatus) {
-            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
-            // if (fastMPIRank == 0) {
-            // sc.writeRestartFile(nt_global);
-            // }
-        }
-    }
+    //     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+    //         FAST_CreateCheckpoint(&iTurb, dummyCheckPointRoot, &ErrStat, ErrMsg);
+    //         checkError(ErrStat, ErrMsg);
+    //     }
+    //     if(scStatus) {
+    //         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+    //         // if (fastMPIRank == 0) {
+    //         // sc.writeRestartFile(nt_global);
+    //         // }
+    //     }
+    // }
 }
 
 void fast::OpenFAST::stepNoWrite() {
@@ -451,10 +451,10 @@ void fast::OpenFAST::calc_nacelle_force(const float & u, const float & v, const 
 
 void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {
 
-    mpiComm = fi.comm;
+    // mpiComm = fi.comm;
 
-    MPI_Comm_rank(mpiComm, &worldMPIRank);
-    MPI_Comm_group(mpiComm, &worldMPIGroup);
+    // MPI_Comm_rank(mpiComm, &worldMPIRank);
+    // MPI_Comm_group(mpiComm, &worldMPIGroup);
 
     nTurbinesGlob = fi.nTurbinesGlob;
 
@@ -845,8 +845,8 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
                 cDriver_Output_to_FAST[iTurbLoc].v[iNodeVel] = c*v_interp - s*w_interp;
                 cDriver_Output_to_FAST[iTurbLoc].w[iNodeVel] = s*v_interp + c*w_interp;
 
-                // printf(" Blade %d, Vel node %d / %d, u_interp %f, v_interp %f, w_interp %f v %f w %f \n", 
-                //          iBlade, j, nBladeVelocityNodes, u_interp, v_tmp, w_interp, c*v_tmp - s*w_interp, s*v_tmp + c*w_interp);
+                printf(" Blade %d, Vel node %d / %d, u_interp %f, v_interp %f, w_interp %f, v %f w %f omega %f r %f \n", 
+                         iBlade, j, nBladeVelocityNodes, u_interp, c*v_interp - s*w_interp, s*v_interp + c*w_interp, v_interp, w_interp, rotor_speed, rDistVel);
             }
         }
         
@@ -930,9 +930,9 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
         double azimuth = computeAzimuthLoc(iTurbLoc);
 
         std::vector<double> forceNodeRadii(nForceNodesBlade);
-        std::vector<double> lineForcesX(nForceNodesBlade);
-        std::vector<double> lineForcesY(nForceNodesBlade);
-        std::vector<double> lineForcesZ(nForceNodesBlade);
+        std::vector<double> pointForcesX(nForceNodesBlade);
+        std::vector<double> pointForcesY(nForceNodesBlade);
+        std::vector<double> pointForcesZ(nForceNodesBlade);
         
         double originForce[3] = {cDriver_Input_from_FAST[iTurbLoc].pxForce[0], 
                                  cDriver_Input_from_FAST[iTurbLoc].pyForce[0], 
@@ -947,32 +947,23 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
                 double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] - originForce[1];
                 double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] - originForce[2];
 
-                // printf("i %d, x: %f, y: %f, z: %f fx %f fy %f fz %f\n", iNode, x, y, z, cDriver_Input_from_FAST[iTurbLoc].fx[iNode], cDriver_Input_from_FAST[iTurbLoc].fy[iNode], cDriver_Input_from_FAST[iTurbLoc].fz[iNode]);
+                printf("i %d, x: %f, y: %f, z: %f fx %f fy %f fz %f\n", iNode, x, y, z, cDriver_Input_from_FAST[iTurbLoc].fx[iNode], cDriver_Input_from_FAST[iTurbLoc].fy[iNode], cDriver_Input_from_FAST[iTurbLoc].fz[iNode]);
                 forceNodeRadii[iForceNode] = std::sqrt(x*x + y*y + z*z);
             }
 
-            lineForcesX[0] = cDriver_Input_from_FAST[iTurbLoc].fx[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
-            lineForcesY[0] = cDriver_Input_from_FAST[iTurbLoc].fy[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
-            lineForcesZ[0] = cDriver_Input_from_FAST[iTurbLoc].fz[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+            // pointForcesX[0] = cDriver_Input_from_FAST[iTurbLoc].fx[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+            // pointForcesY[0] = cDriver_Input_from_FAST[iTurbLoc].fy[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
+            // pointForcesZ[0] = cDriver_Input_from_FAST[iTurbLoc].fz[1+iBlade*nForceNodesBlade]/(forceNodeRadii[0]/2);
 
-            for(int iForceNode=1; iForceNode<nForceNodesBlade-1; iForceNode++ )
+            for(int iForceNode=0; iForceNode<nForceNodesBlade; iForceNode++ )
             {
                 int iNode = iForceNode + iBlade*nForceNodesBlade + 1;
-                double fx = cDriver_Input_from_FAST[iTurbLoc].fx[iNode];
-                double fy = cDriver_Input_from_FAST[iTurbLoc].fy[iNode];
-                double fz = cDriver_Input_from_FAST[iTurbLoc].fz[iNode];
-
-                double dr = 0.5*(forceNodeRadii[iForceNode+1] - forceNodeRadii[iForceNode-1]);
-
-                lineForcesX[iForceNode] = fx/dr;
-                lineForcesY[iForceNode] = fy/dr;
-                lineForcesZ[iForceNode] = fz/dr;
+                pointForcesX[iForceNode] = cDriver_Input_from_FAST[iTurbLoc].fx[iNode];
+                pointForcesY[iForceNode] = cDriver_Input_from_FAST[iTurbLoc].fy[iNode];
+                pointForcesZ[iForceNode] = cDriver_Input_from_FAST[iTurbLoc].fz[iNode];
             }
             
-            lineForcesX[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fx[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
-            lineForcesY[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fy[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
-            lineForcesZ[nForceNodesBlade-1] = cDriver_Input_from_FAST[iTurbLoc].fz[nForceNodesBlade+iBlade*nForceNodesBlade]/(forceNodeRadii[nForceNodesBlade-1]/2);
-
+        
             double localAzimuth = azimuth + (double)iBlade/(double)nBlades * 2.f*M_PI;
             double s = sin(localAzimuth);
             double c = cos(localAzimuth);
@@ -981,16 +972,18 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
                 double radius = radii[iBladeNode];
 
                 int jForceLower = findNextLowerIndex(forceNodeRadii.data(), nForceNodesBlade, radius);
-                double rInterp = (radius - forceNodeRadii[jForceLower])/(forceNodeRadii[jForceLower+1] - forceNodeRadii[jForceLower]);
+                // double rInterp = (radius - forceNodeRadii[jForceLower])/(forceNodeRadii[jForceLower+1] - forceNodeRadii[jForceLower]);
                 int iForceNode = jForceLower + iBlade*nForceNodesBlade + 1;
 
-                double interp_fx = (1.0-rInterp)*lineForcesX[jForceLower] + rInterp*lineForcesX[jForceLower+1];
-                double interp_fy = (1.0-rInterp)*lineForcesY[jForceLower] + rInterp*lineForcesY[jForceLower+1];
-                double interp_fz = (1.0-rInterp)*lineForcesZ[jForceLower] + rInterp*lineForcesZ[jForceLower+1];
+                double dr = forceNodeRadii[jForceLower+1] - forceNodeRadii[jForceLower];
+
+                double interp_fx = 0.5*(pointForcesX[jForceLower] + pointForcesX[jForceLower+1])/dr;
+                double interp_fy = 0.5*(pointForcesY[jForceLower] + pointForcesY[jForceLower+1])/dr;
+                double interp_fz = 0.5*(pointForcesZ[jForceLower] + pointForcesZ[jForceLower+1])/dr;
 
                 double fy = interp_fy*c+interp_fz*s;
                 double fz = -interp_fy*s+interp_fz*c;
-                // printf("iBladeNode: %d, iForceNode: %d, iExternNode: %d, radius: %f, r %f, interp_fx: %f, interp_fy: %f, interp_fz: %f \n", iBladeNode, iForceNode, iExternBladeNode, radius, rInterp, interp_fx, fy, fz);
+                printf("iBladeNode: %d, iForceNode: %d, iExternNode: %d, radius: %f, interp_fx: %f, interp_fy: %f, interp_fz: %f \n", iBladeNode, iForceNode, iExternBladeNode, radius, interp_fx, fy, fz);
 
                 blade_forces_x[iExternBladeNode] =  interp_fx;
                 blade_forces_y[iExternBladeNode] =  interp_fy*c+interp_fz*s; 
@@ -1005,7 +998,8 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
 
 /*Copies all coordinates at force nodes relative to the hub position.
 Assumes arrays are layed out as turbine, blade, node*/
-void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z){
+void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z)
+{
     
     int iBladeNode = 0;
     int iTowerNode = 0;
@@ -1168,46 +1162,47 @@ fast::ActuatorNodeType fast::OpenFAST::getForceNodeType(int iTurbGlob, int iNode
 
 void fast::OpenFAST::allocateMemory() {
 
-    for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-        if (dryRun) {
-            if(worldMPIRank == 0) {
-                std::cout << "iTurb = " << iTurb << " turbineMapGlobToProc[iTurb] = " << turbineMapGlobToProc[iTurb] << std::endl ;
-            }
-        }
-        if(worldMPIRank == turbineMapGlobToProc[iTurb]) {
-            turbineMapProcToGlob[nTurbinesProc] = iTurb;
-            reverseTurbineMapProcToGlob[iTurb] = nTurbinesProc;
-            nTurbinesProc++ ;
-        }
-        turbineSetProcs.insert(turbineMapGlobToProc[iTurb]);
-    }
+    nTurbinesProc = nTurbinesGlob;
+    // for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
+    //     // if (dryRun) {
+    //     //     if(worldMPIRank == 0) {
+    //     //         std::cout << "iTurb = " << iTurb << " turbineMapGlobToProc[iTurb] = " << turbineMapGlobToProc[iTurb] << std::endl ;
+    //     //     }
+    //     // }
+    //     // if(worldMPIRank == turbineMapGlobToProc[iTurb]) {
+    //     //     turbineMapProcToGlob[nTurbinesProc] = iTurb;
+    //     //     reverseTurbineMapProcToGlob[iTurb] = nTurbinesProc;
+    //     //     nTurbinesProc++ ;
+    //     // }
+    //     turbineSetProcs.insert(turbineMapGlobToProc[iTurb]);
+    // }
 
-    int nProcsWithTurbines=0;
-    turbineProcs.resize(turbineSetProcs.size());
+    // int nProcsWithTurbines=0;
+    // turbineProcs.resize(turbineSetProcs.size());
 
-    for (std::set<int>::const_iterator p = turbineSetProcs.begin(); p != turbineSetProcs.end(); p++) {
-        turbineProcs[nProcsWithTurbines] = *p;
-        nProcsWithTurbines++ ;
-    }
+    // for (std::set<int>::const_iterator p = turbineSetProcs.begin(); p != turbineSetProcs.end(); p++) {
+    //     turbineProcs[nProcsWithTurbines] = *p;
+    //     nProcsWithTurbines++ ;
+    // }
 
-    if (dryRun) {
-        if (nTurbinesProc > 0) {
-            std::ofstream turbineAllocFile;
-            turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
-            for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
-            }
-            turbineAllocFile.flush();
-            turbineAllocFile.close() ;
-        }
-    }
+    // if (dryRun) {
+    //     if (nTurbinesProc > 0) {
+    //         std::ofstream turbineAllocFile;
+    //         turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
+    //         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+    //             turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
+    //         }
+    //         turbineAllocFile.flush();
+    //         turbineAllocFile.close() ;
+    //     }
+    // }
 
     // Construct a group containing all procs running atleast 1 turbine in FAST
-    MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, &turbineProcs[0], &fastMPIGroup) ;
-    int fastMPIcommTag = MPI_Comm_create(mpiComm, fastMPIGroup, &fastMPIComm);
-    if (MPI_COMM_NULL != fastMPIComm) {
-        MPI_Comm_rank(fastMPIComm, &fastMPIRank);
-    }
+    // MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, &turbineProcs[0], &fastMPIGroup) ;
+    // int fastMPIcommTag = MPI_Comm_create(mpiComm, fastMPIGroup, &fastMPIComm);
+    // if (MPI_COMM_NULL != fastMPIComm) {
+    //     MPI_Comm_rank(fastMPIComm, &fastMPIRank);
+    // }
 
     TurbID.resize(nTurbinesProc);
     TurbineBasePos.resize(nTurbinesProc);
@@ -1256,15 +1251,15 @@ void fast::OpenFAST::allocateMemory() {
 
 void fast::OpenFAST::allocateTurbinesToProcsSimple() {
     // Allocate turbines to each processor - round robin fashion
-    int nProcs ;
-    MPI_Comm_size(mpiComm, &nProcs);
-    for(int j = 0; j < nTurbinesGlob; j++)  turbineMapGlobToProc[j] = j % nProcs ;
+    // int nProcs ;
+    // MPI_Comm_size(mpiComm, &nProcs);
+    // for(int j = 0; j < nTurbinesGlob; j++)  turbineMapGlobToProc[j] = j % nProcs ;
 }
 
 void fast::OpenFAST::end() {
     // Deallocate types we allocated earlier
 
-    if (nTurbinesProc > 0) closeVelocityDataFile(nt_global, velNodeDataFile);
+    // if (nTurbinesProc > 0) closeVelocityDataFile(nt_global, velNodeDataFile);
 
     if ( !dryRun) {
         bool stopTheProgram = false;
@@ -1274,11 +1269,11 @@ void fast::OpenFAST::end() {
         FAST_DeallocateTurbines(&ErrStat, ErrMsg);
     }
 
-    MPI_Group_free(&fastMPIGroup);
-    if (MPI_COMM_NULL != fastMPIComm) {
-        MPI_Comm_free(&fastMPIComm);
-    }
-    MPI_Group_free(&worldMPIGroup);
+    // MPI_Group_free(&fastMPIGroup);
+    // if (MPI_COMM_NULL != fastMPIComm) {
+    //     MPI_Comm_free(&fastMPIComm);
+    // }
+    // MPI_Group_free(&worldMPIGroup);
 
     if(scStatus) {
         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
@@ -1286,152 +1281,152 @@ void fast::OpenFAST::end() {
     }
 }
 
-void fast::OpenFAST::readVelocityData(int nTimesteps) {
+// void fast::OpenFAST::readVelocityData(int nTimesteps) {
 
-    int nTurbines;
+//     int nTurbines;
 
-    hid_t velDataFile = H5Fopen(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+//     hid_t velDataFile = H5Fopen(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
 
-    {
-        hid_t attr = H5Aopen(velDataFile, "nTurbines", H5P_DEFAULT);
-        herr_t ret = H5Aread(attr, H5T_NATIVE_INT, &nTurbines) ;
-        H5Aclose(attr);
-    }
+//     {
+//         hid_t attr = H5Aopen(velDataFile, "nTurbines", H5P_DEFAULT);
+//         herr_t ret = H5Aread(attr, H5T_NATIVE_INT, &nTurbines) ;
+//         H5Aclose(attr);
+//     }
 
-    // Allocate memory and read the velocity data.
-    velNodeData.resize(nTurbines);
-    for (int iTurb=0; iTurb < nTurbines; iTurb++) {
-        int nVelPts = get_numVelPtsLoc(iTurb) ;
-        velNodeData[iTurb].resize(nTimesteps*nVelPts*6) ;
-        hid_t dset_id = H5Dopen2(velDataFile, ("/turbine" + std::to_string(iTurb)).c_str(), H5P_DEFAULT);
-        hid_t dspace_id = H5Dget_space(dset_id);
+//     // Allocate memory and read the velocity data.
+//     velNodeData.resize(nTurbines);
+//     for (int iTurb=0; iTurb < nTurbines; iTurb++) {
+//         int nVelPts = get_numVelPtsLoc(iTurb) ;
+//         velNodeData[iTurb].resize(nTimesteps*nVelPts*6) ;
+//         hid_t dset_id = H5Dopen2(velDataFile, ("/turbine" + std::to_string(iTurb)).c_str(), H5P_DEFAULT);
+//         hid_t dspace_id = H5Dget_space(dset_id);
 
-        hsize_t start[3]; start[1] = 0; start[2] = 0;
-        hsize_t count[3]; count[0] = 1; count[1] = nVelPts; count[2] = 6;
-        hid_t mspace_id = H5Screate_simple(3, count, NULL);
+//         hsize_t start[3]; start[1] = 0; start[2] = 0;
+//         hsize_t count[3]; count[0] = 1; count[1] = nVelPts; count[2] = 6;
+//         hid_t mspace_id = H5Screate_simple(3, count, NULL);
 
-        for (int iStep=0; iStep < nTimesteps; iStep++) {
-            start[0] = iStep;
-            H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
-            herr_t status = H5Dread(dset_id, H5T_NATIVE_DOUBLE, mspace_id, dspace_id, H5P_DEFAULT, &velNodeData[iTurb][iStep*nVelPts*6] );
-        }
+//         for (int iStep=0; iStep < nTimesteps; iStep++) {
+//             start[0] = iStep;
+//             H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
+//             herr_t status = H5Dread(dset_id, H5T_NATIVE_DOUBLE, mspace_id, dspace_id, H5P_DEFAULT, &velNodeData[iTurb][iStep*nVelPts*6] );
+//         }
 
-        herr_t status = H5Dclose(dset_id);
-    }
-}
+//         herr_t status = H5Dclose(dset_id);
+//     }
+// }
 
-hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
+// hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
 
-    hid_t velDataFile;
-    if (createFile) {
-        // Open the file in create mode
-        velDataFile = H5Fcreate(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+//     hid_t velDataFile;
+//     if (createFile) {
+//         // Open the file in create mode
+//         velDataFile = H5Fcreate(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-        {
-            hsize_t dims[1];
-            dims[0] = 1;
-            hid_t dataSpace = H5Screate_simple(1, dims, NULL);
-            hid_t attr = H5Acreate2(velDataFile, "nTurbines", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesProc);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
+//         {
+//             hsize_t dims[1];
+//             dims[0] = 1;
+//             hid_t dataSpace = H5Screate_simple(1, dims, NULL);
+//             hid_t attr = H5Acreate2(velDataFile, "nTurbines", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesProc);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
             
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(velDataFile, "nTimesteps", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-        }
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(velDataFile, "nTimesteps", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
+//         }
 
-        int ntMax = tMax/dtFAST ;
+//         int ntMax = tMax/dtFAST ;
 
-        for (int iTurb = 0; iTurb < nTurbinesProc; iTurb++) {
-            int nVelPts = get_numVelPtsLoc(iTurb);
-            hsize_t dims[3];
-            dims[0] = ntMax; dims[1] = nVelPts; dims[2] = 6 ;
+//         for (int iTurb = 0; iTurb < nTurbinesProc; iTurb++) {
+//             int nVelPts = get_numVelPtsLoc(iTurb);
+//             hsize_t dims[3];
+//             dims[0] = ntMax; dims[1] = nVelPts; dims[2] = 6 ;
 
-            hsize_t chunk_dims[3];
-            chunk_dims[0] = 1; chunk_dims[1] = nVelPts; chunk_dims[2] = 6;
-            hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
-            H5Pset_chunk(dcpl_id, 3, chunk_dims);
+//             hsize_t chunk_dims[3];
+//             chunk_dims[0] = 1; chunk_dims[1] = nVelPts; chunk_dims[2] = 6;
+//             hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+//             H5Pset_chunk(dcpl_id, 3, chunk_dims);
 
-            hid_t dataSpace = H5Screate_simple(3, dims, NULL);
-            hid_t dataSet = H5Dcreate(velDataFile, ("/turbine" + std::to_string(iTurb)).c_str(), H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
+//             hid_t dataSpace = H5Screate_simple(3, dims, NULL);
+//             hid_t dataSet = H5Dcreate(velDataFile, ("/turbine" + std::to_string(iTurb)).c_str(), H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
-            herr_t status = H5Pclose(dcpl_id);
-            status = H5Dclose(dataSet);
-            status = H5Sclose(dataSpace);
-        }
+//             herr_t status = H5Pclose(dcpl_id);
+//             status = H5Dclose(dataSet);
+//             status = H5Sclose(dataSpace);
+//         }
 
-    } else {
-        // Open the file in append mode
-        velDataFile = H5Fopen(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
-    }
+//     } else {
+//         // Open the file in append mode
+//         velDataFile = H5Fopen(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+//     }
 
-    return velDataFile;
+//     return velDataFile;
 
-}
+// }
 
-herr_t fast::OpenFAST::closeVelocityDataFile(int nt_global, hid_t velDataFile) {
-    herr_t status = H5Fclose(velDataFile) ;
-    return status;
-}
+// herr_t fast::OpenFAST::closeVelocityDataFile(int nt_global, hid_t velDataFile) {
+//     herr_t status = H5Fclose(velDataFile) ;
+//     return status;
+// }
 
-void fast::OpenFAST::backupVelocityDataFile(int curTimeStep, hid_t & velDataFile) {
+// void fast::OpenFAST::backupVelocityDataFile(int curTimeStep, hid_t & velDataFile) {
 
-    closeVelocityDataFile(curTimeStep, velDataFile);
+//     closeVelocityDataFile(curTimeStep, velDataFile);
 
-    std::ifstream source("velDatafile." + std::to_string(worldMPIRank) + ".h5", std::ios::binary);
-    std::ofstream dest("velDatafile." + std::to_string(worldMPIRank) + ".h5." + std::to_string(curTimeStep) + ".bak", std::ios::binary);
+//     std::ifstream source("velDatafile." + std::to_string(worldMPIRank) + ".h5", std::ios::binary);
+//     std::ofstream dest("velDatafile." + std::to_string(worldMPIRank) + ".h5." + std::to_string(curTimeStep) + ".bak", std::ios::binary);
 
-    dest << source.rdbuf();
-    source.close();
-    dest.close();
+//     dest << source.rdbuf();
+//     source.close();
+//     dest.close();
 
-    velDataFile = openVelocityDataFile(false);
-}
+//     velDataFile = openVelocityDataFile(false);
+// }
 
-void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
+// void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
 
-    hsize_t start[3]; start[0] = iTimestep; start[1] = 0; start[2] = 0;
-    int nVelPts = get_numVelPtsLoc(iTurb) ;
-    hsize_t count[3]; count[0] = 1; count[1] = nVelPts; count[2] = 6;
+//     hsize_t start[3]; start[0] = iTimestep; start[1] = 0; start[2] = 0;
+//     int nVelPts = get_numVelPtsLoc(iTurb) ;
+//     hsize_t count[3]; count[0] = 1; count[1] = nVelPts; count[2] = 6;
 
-    std::vector<double> tmpVelData;
-    tmpVelData.resize(nVelPts * 6);
+//     std::vector<double> tmpVelData;
+//     tmpVelData.resize(nVelPts * 6);
 
-    for (int iNode=0 ; iNode < nVelPts; iNode++) {
-        tmpVelData[iNode*6 + 0] = iData.pxVel[iNode];
-        tmpVelData[iNode*6 + 1] = iData.pyVel[iNode];
-        tmpVelData[iNode*6 + 2] = iData.pzVel[iNode];
-        tmpVelData[iNode*6 + 3] = oData.u[iNode];
-        tmpVelData[iNode*6 + 4] = oData.v[iNode];
-        tmpVelData[iNode*6 + 5] = oData.w[iNode];
-    }
+//     for (int iNode=0 ; iNode < nVelPts; iNode++) {
+//         tmpVelData[iNode*6 + 0] = iData.pxVel[iNode];
+//         tmpVelData[iNode*6 + 1] = iData.pyVel[iNode];
+//         tmpVelData[iNode*6 + 2] = iData.pzVel[iNode];
+//         tmpVelData[iNode*6 + 3] = oData.u[iNode];
+//         tmpVelData[iNode*6 + 4] = oData.v[iNode];
+//         tmpVelData[iNode*6 + 5] = oData.w[iNode];
+//     }
 
-    hid_t dset_id = H5Dopen2(h5File, ("/turbine" + std::to_string(iTurb)).c_str(), H5P_DEFAULT);
-    hid_t dspace_id = H5Dget_space(dset_id);
-    H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
-    hid_t mspace_id = H5Screate_simple(3, count, NULL);
-    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, mspace_id, dspace_id, H5P_DEFAULT, tmpVelData.data());
+//     hid_t dset_id = H5Dopen2(h5File, ("/turbine" + std::to_string(iTurb)).c_str(), H5P_DEFAULT);
+//     hid_t dspace_id = H5Dget_space(dset_id);
+//     H5Sselect_hyperslab(dspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
+//     hid_t mspace_id = H5Screate_simple(3, count, NULL);
+//     H5Dwrite(dset_id, H5T_NATIVE_DOUBLE, mspace_id, dspace_id, H5P_DEFAULT, tmpVelData.data());
 
-    H5Dclose(dset_id);
-    H5Sclose(dspace_id);
-    H5Sclose(mspace_id);
+//     H5Dclose(dset_id);
+//     H5Sclose(dspace_id);
+//     H5Sclose(mspace_id);
 
-    hid_t attr_id = H5Aopen_by_name(h5File, ".", "nTimesteps", H5P_DEFAULT, H5P_DEFAULT);
-    herr_t status = H5Awrite(attr_id, H5T_NATIVE_INT, &iTimestep);
-    status = H5Aclose(attr_id);
+//     hid_t attr_id = H5Aopen_by_name(h5File, ".", "nTimesteps", H5P_DEFAULT, H5P_DEFAULT);
+//     herr_t status = H5Awrite(attr_id, H5T_NATIVE_INT, &iTimestep);
+//     status = H5Aclose(attr_id);
 
-}
+// }
 
-void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
-    int nVelPts = get_numVelPtsLoc(iTurb);
-    for (int j = 0; j < nVelPts; j++){
-        cDriver_Output_to_FAST.u[j] = velData[(iPrestart*nVelPts+j)*6 + 3];
-        cDriver_Output_to_FAST.v[j] = velData[(iPrestart*nVelPts+j)*6 + 4];
-        cDriver_Output_to_FAST.w[j] = velData[(iPrestart*nVelPts+j)*6 + 5];
-    }
-}
+// void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
+//     int nVelPts = get_numVelPtsLoc(iTurb);
+//     for (int j = 0; j < nVelPts; j++){
+//         cDriver_Output_to_FAST.u[j] = velData[(iPrestart*nVelPts+j)*6 + 3];
+//         cDriver_Output_to_FAST.v[j] = velData[(iPrestart*nVelPts+j)*6 + 4];
+//         cDriver_Output_to_FAST.w[j] = velData[(iPrestart*nVelPts+j)*6 + 5];
+//     }
+// }
 
 void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
