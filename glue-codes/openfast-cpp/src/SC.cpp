@@ -111,9 +111,9 @@ void SuperController::init(scInitOutData & scio, int nTurbinesProc) {
     }
 }
 
-void SuperController::init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm) {
+void SuperController::init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob) {
 
-    fastMPIComm = inFastMPIComm;
+    // fastMPIComm = inFastMPIComm;
     nTurbinesProc = inNTurbinesProc;
     turbineMapProcToGlob = iTurbineMapProcToGlob;
 
@@ -184,196 +184,196 @@ void SuperController::updateStates(double t) {
 
 }
 
-int SuperController::readRestartFile(int n_t_global) {
+// int SuperController::readRestartFile(int n_t_global) {
 
-    if (nTurbinesProc > 0) {
+//     if (nTurbinesProc > 0) {
 
-        hid_t restartFile = H5Fopen(("sc" + std::to_string(n_t_global) + ".chkp.h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+//         hid_t restartFile = H5Fopen(("sc" + std::to_string(n_t_global) + ".chkp.h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
 
-        {
-            hid_t attr = H5Aopen(restartFile, "nTurbinesGlob", H5P_DEFAULT);
-            herr_t ret = H5Aread(attr, H5T_NATIVE_INT, &nTurbinesGlob) ;
-            H5Aclose(attr);
+//         {
+//             hid_t attr = H5Aopen(restartFile, "nTurbinesGlob", H5P_DEFAULT);
+//             herr_t ret = H5Aread(attr, H5T_NATIVE_INT, &nTurbinesGlob) ;
+//             H5Aclose(attr);
 
-            attr = H5Aopen(restartFile, "nCtrl2SC", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nCtrl2SC) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nCtrl2SC", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nCtrl2SC) ;
+//             H5Aclose(attr);
 
-            attr = H5Aopen(restartFile, "nSC2Ctrl", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nSC2Ctrl) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nSC2Ctrl", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nSC2Ctrl) ;
+//             H5Aclose(attr);
 
-            attr = H5Aopen(restartFile, "nInpGlobal", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nInpGlobal) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nInpGlobal", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nInpGlobal) ;
+//             H5Aclose(attr);
 
-            attr = H5Aopen(restartFile, "nSC2CtrlGlob", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nSC2CtrlGlob) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nSC2CtrlGlob", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nSC2CtrlGlob) ;
+//             H5Aclose(attr);
 
-            attr = H5Aopen(restartFile, "nStatesGlobal", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nStatesGlobal) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nStatesGlobal", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nStatesGlobal) ;
+//             H5Aclose(attr);
 
-            globStates.resize(nStatesGlobal);
-            globStates_np1.resize(nStatesGlobal);
+//             globStates.resize(nStatesGlobal);
+//             globStates_np1.resize(nStatesGlobal);
 
-            attr = H5Aopen(restartFile, "nStatesTurbine", H5P_DEFAULT);
-            ret = H5Aread(attr, H5T_NATIVE_INT, &nStatesTurbine) ;
-            H5Aclose(attr);
+//             attr = H5Aopen(restartFile, "nStatesTurbine", H5P_DEFAULT);
+//             ret = H5Aread(attr, H5T_NATIVE_INT, &nStatesTurbine) ;
+//             H5Aclose(attr);
 
-            turbineStates.resize(nTurbinesGlob*nStatesTurbine);
-            turbineStates_np1.resize(nTurbinesGlob*nStatesTurbine);
+//             turbineStates.resize(nTurbinesGlob*nStatesTurbine);
+//             turbineStates_np1.resize(nTurbinesGlob*nStatesTurbine);
 
-#ifdef DEBUG
-            std::cout << "nTurbinesGlob = " << nTurbinesGlob << std::endl ;
-            std::cout << "nCtrl2SC = " << nCtrl2SC << std::endl ;
-            std::cout << "nSC2Ctrl = " << nSC2Ctrl << std::endl ;
-            std::cout << "nInpGlobal = " << nInpGlobal << std::endl ;
-            std::cout << "nSC2CtrlGlob = " << nSC2CtrlGlob << std::endl ;
-            std::cout << "nStatesGlobal = " << nStatesGlobal << std::endl ;
-            std::cout << "nStatesTurbine = " << nStatesTurbine << std::endl ;
-#endif
+// #ifdef DEBUG
+//             std::cout << "nTurbinesGlob = " << nTurbinesGlob << std::endl ;
+//             std::cout << "nCtrl2SC = " << nCtrl2SC << std::endl ;
+//             std::cout << "nSC2Ctrl = " << nSC2Ctrl << std::endl ;
+//             std::cout << "nInpGlobal = " << nInpGlobal << std::endl ;
+//             std::cout << "nSC2CtrlGlob = " << nSC2CtrlGlob << std::endl ;
+//             std::cout << "nStatesGlobal = " << nStatesGlobal << std::endl ;
+//             std::cout << "nStatesTurbine = " << nStatesTurbine << std::endl ;
+// #endif
 
-        }
+//         }
 
-        if (nStatesGlobal > 0) {
-            hid_t dataSet = H5Dopen2(restartFile, "/globStates", H5P_DEFAULT);
-            herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
-            status = H5Dclose(dataSet);
+//         if (nStatesGlobal > 0) {
+//             hid_t dataSet = H5Dopen2(restartFile, "/globStates", H5P_DEFAULT);
+//             herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
+//             status = H5Dclose(dataSet);
 
-            dataSet = H5Dopen2(restartFile, "/globStates_np1", H5P_DEFAULT);
-            status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
-            status = H5Dclose(dataSet);
-        }
+//             dataSet = H5Dopen2(restartFile, "/globStates_np1", H5P_DEFAULT);
+//             status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
+//             status = H5Dclose(dataSet);
+//         }
 
-        if (nStatesTurbine > 0) {
-            hid_t dataSet = H5Dopen2(restartFile, "turbineStates", H5P_DEFAULT);
-            herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
-            status = H5Dclose(dataSet);
+//         if (nStatesTurbine > 0) {
+//             hid_t dataSet = H5Dopen2(restartFile, "turbineStates", H5P_DEFAULT);
+//             herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
+//             status = H5Dclose(dataSet);
 
-            dataSet = H5Dopen2(restartFile, "turbineStates_np1", H5P_DEFAULT);
-            status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
-            status = H5Dclose(dataSet);
-        }
+//             dataSet = H5Dopen2(restartFile, "turbineStates_np1", H5P_DEFAULT);
+//             status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
+//             status = H5Dclose(dataSet);
+//         }
 
-#ifdef DEBUG
-        for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-            for(int i=0; i < nStatesTurbine; i++) {
-                std::cout << "iTurb = " << iTurb << ", i = " << i << ",  " ;
-                std::cout << turbineStates[iTurb*nStatesTurbine + i] << std::endl ;
-            }
-        }
-#endif
-        herr_t status = H5Fclose(restartFile);
-    }
+// #ifdef DEBUG
+//         for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
+//             for(int i=0; i < nStatesTurbine; i++) {
+//                 std::cout << "iTurb = " << iTurb << ", i = " << i << ",  " ;
+//                 std::cout << turbineStates[iTurb*nStatesTurbine + i] << std::endl ;
+//             }
+//         }
+// #endif
+//         herr_t status = H5Fclose(restartFile);
+//     }
 
-    return 0;
-}
-
-
-int SuperController::writeRestartFile(int n_t_global) {
-
-  /* // HDF5 stuff to write states to restart file or read back from it */
-
-    if (nTurbinesProc > 0) {
-
-        hid_t restartFile = H5Fcreate(("sc" + std::to_string(n_t_global) + ".chkp.h5").c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-        {
-            hsize_t dims[1];
-            dims[0] = 1;
-            hid_t dataSpace = H5Screate_simple(1, dims, NULL);
-            hid_t attr = H5Acreate2(restartFile, "nTurbinesGlob", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesGlob);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nCtrl2SC", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nCtrl2SC);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nSC2Ctrl", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nSC2Ctrl);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nInpGlobal", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nInpGlobal);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nSC2CtrlGlob", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nSC2CtrlGlob);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nStatesGlobal", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nStatesGlobal);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            attr = H5Acreate2(restartFile, "nStatesTurbine", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
-            status = H5Awrite(attr, H5T_NATIVE_INT, &nStatesTurbine);
-            status = H5Aclose(attr);
-            status = H5Sclose(dataSpace);
-
-        }
-
-        if (nStatesGlobal > 0) {
-            hsize_t dims[1];
-            dims[0] = nStatesGlobal;
-            hid_t dataSpace = H5Screate_simple(1, dims, NULL);
-            hid_t dataSet = H5Dcreate2(restartFile, "/globStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-            herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
-
-            status = H5Dclose(dataSet);
-            status = H5Sclose(dataSpace);
-
-            dataSpace = H5Screate_simple(1, dims, NULL);
-            dataSet = H5Dcreate2(restartFile, "/globStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-            status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
-
-            status = H5Dclose(dataSet);
-            status = H5Sclose(dataSpace);
+//     return 0;
+// }
 
 
-        }
+// int SuperController::writeRestartFile(int n_t_global) {
 
-        if (nStatesTurbine > 0) {
+//   /* // HDF5 stuff to write states to restart file or read back from it */
 
-            hsize_t dims[2];
-            dims[0] = nTurbinesGlob;
-            dims[1] = nStatesTurbine;
+//     if (nTurbinesProc > 0) {
 
-            hid_t dataSpace = H5Screate_simple(2, dims, NULL);
-            hid_t dataSet = H5Dcreate2(restartFile, "turbineStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-            herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
+//         hid_t restartFile = H5Fcreate(("sc" + std::to_string(n_t_global) + ".chkp.h5").c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-            status = H5Dclose(dataSet);
-            status = H5Sclose(dataSpace);
+//         {
+//             hsize_t dims[1];
+//             dims[0] = 1;
+//             hid_t dataSpace = H5Screate_simple(1, dims, NULL);
+//             hid_t attr = H5Acreate2(restartFile, "nTurbinesGlob", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesGlob);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
 
-            dataSpace = H5Screate_simple(2, dims, NULL);
-            dataSet = H5Dcreate2(restartFile, "turbineStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-            status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nCtrl2SC", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nCtrl2SC);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
 
-            status = H5Dclose(dataSet);
-            status = H5Sclose(dataSpace);
-        }
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nSC2Ctrl", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nSC2Ctrl);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
 
-        herr_t status = H5Fclose(restartFile);
-    }
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nInpGlobal", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nInpGlobal);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
 
-  return 0;
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nSC2CtrlGlob", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nSC2CtrlGlob);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
 
-}
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nStatesGlobal", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nStatesGlobal);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
+
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             attr = H5Acreate2(restartFile, "nStatesTurbine", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
+//             status = H5Awrite(attr, H5T_NATIVE_INT, &nStatesTurbine);
+//             status = H5Aclose(attr);
+//             status = H5Sclose(dataSpace);
+
+//         }
+
+//         if (nStatesGlobal > 0) {
+//             hsize_t dims[1];
+//             dims[0] = nStatesGlobal;
+//             hid_t dataSpace = H5Screate_simple(1, dims, NULL);
+//             hid_t dataSet = H5Dcreate2(restartFile, "/globStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+//             herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
+
+//             status = H5Dclose(dataSet);
+//             status = H5Sclose(dataSpace);
+
+//             dataSpace = H5Screate_simple(1, dims, NULL);
+//             dataSet = H5Dcreate2(restartFile, "/globStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+//             status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
+
+//             status = H5Dclose(dataSet);
+//             status = H5Sclose(dataSpace);
+
+
+//         }
+
+//         if (nStatesTurbine > 0) {
+
+//             hsize_t dims[2];
+//             dims[0] = nTurbinesGlob;
+//             dims[1] = nStatesTurbine;
+
+//             hid_t dataSpace = H5Screate_simple(2, dims, NULL);
+//             hid_t dataSet = H5Dcreate2(restartFile, "turbineStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+//             herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
+
+//             status = H5Dclose(dataSet);
+//             status = H5Sclose(dataSpace);
+
+//             dataSpace = H5Screate_simple(2, dims, NULL);
+//             dataSet = H5Dcreate2(restartFile, "turbineStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+//             status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
+
+//             status = H5Dclose(dataSet);
+//             status = H5Sclose(dataSpace);
+//         }
+
+//         herr_t status = H5Fclose(restartFile);
+//     }
+
+//   return 0;
+
+// }
 
 void SuperController::fastSCInputOutput() {
 
@@ -393,9 +393,9 @@ void SuperController::fastSCInputOutput() {
         }
     }
 
-    if (MPI_COMM_NULL != fastMPIComm) {
-        MPI_Allreduce(MPI_IN_PLACE, to_SC_np1.data(), nCtrl2SC*nTurbinesGlob, MPI_FLOAT, MPI_SUM, fastMPIComm) ;
-    }
+    // if (MPI_COMM_NULL != fastMPIComm) {
+    //     MPI_Allreduce(MPI_IN_PLACE, to_SC_np1.data(), nCtrl2SC*nTurbinesGlob, MPI_FLOAT, MPI_SUM, fastMPIComm) ;
+    // }
 
     for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 

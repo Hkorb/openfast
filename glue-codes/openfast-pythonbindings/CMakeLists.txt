@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 project(${SKBUILD_PROJECT_NAME}  LANGUAGES CXX)
 
 find_package(pybind11 CONFIG REQUIRED)
-find_package(MPI REQUIRED)
+# find_package(MPI REQUIRED)
 
 pybind11_add_module(openfast_pythonbinding MODULE src/openfast.cpp)
 
@@ -13,15 +13,16 @@ include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
 include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 
 
-target_include_directories(openfast_pythonbinding PRIVATE pybind11_INCLUDE_DIR ${MPI_INCLUDE_PATH})
+target_include_directories(openfast_pythonbinding PRIVATE pybind11_INCLUDE_DIR)
 
 
 target_link_libraries(openfast_pythonbinding PRIVATE
         openfastcpplib
-        ${MPI_LIBRARIES})
+        # ${MPI_LIBRARIES}
+        )
 
-set_target_properties(openfast_pythonbinding PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
-set_target_properties(openfast_pythonbinding PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+# set_target_properties(openfast_pythonbinding PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS}")
+# set_target_properties(openfast_pythonbinding PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
 
 set_target_properties(  openfast_pythonbinding PROPERTIES 
                             OUTPUT_NAME "bindings")

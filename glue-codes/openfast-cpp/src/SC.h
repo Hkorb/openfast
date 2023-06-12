@@ -1,17 +1,17 @@
-#ifndef OMPI_SKIP_MPICXX
- #define OMPI_SKIP_MPICXX
-#endif
-#ifndef MPICH_SKIP_MPICXX
- #define MPICH_SKIP_MPICXX
-#endif
+// #ifndef OMPI_SKIP_MPICXX
+//  #define OMPI_SKIP_MPICXX
+// #endif
+// #ifndef MPICH_SKIP_MPICXX
+//  #define MPICH_SKIP_MPICXX
+// #endif
 #include "FAST_Library.h"
 #include <sstream>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include "mpi.h"
-#include "hdf5.h"
+// #include "mpi.h"
+// #include "hdf5.h"
 #include "dlfcn.h"
 
 class scInitOutData {
@@ -36,7 +36,7 @@ public:
 
 private:
 
-    MPI_Comm  fastMPIComm;
+    // MPI_Comm  fastMPIComm;
 
     int nTurbinesGlob;
     int nTurbinesProc;
@@ -106,7 +106,7 @@ public:
     ~SuperController() ;
 
     void init(scInitOutData & scio, int nTurbinesProc);
-    void init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm);
+    void init_sc(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob);
 
     void load(int inNTurbinesGlob, std::string inScLibFile, scInitOutData & scio);
 
@@ -119,9 +119,9 @@ public:
 
     void advanceTime() ; //Advance states to time step 'n+1'
 
-    int writeRestartFile(int n_t_global);
+    // int writeRestartFile(int n_t_global);
 
-    int readRestartFile(int n_t_global);
+    // int readRestartFile(int n_t_global);
 
     void end() {} ;
 };

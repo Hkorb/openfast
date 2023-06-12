@@ -1,7 +1,7 @@
 #include "OpenFAST.H"
 #include "yaml-cpp/yaml.h"
 #include <iostream>
-#include <mpi.h>
+// #include <mpi.h>
 
 inline bool checkFileExists(const std::string& name) {
     struct stat buffer;   
@@ -28,7 +28,7 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
 
 void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, double * tEnd) {
 
-    fi.comm = MPI_COMM_WORLD;
+    // fi.comm = MPI_COMM_WORLD;
 
     // Check if the input file exists and read it
     if ( checkFileExists(cInterfaceInputFile) ) {
@@ -100,9 +100,9 @@ int main(int argc, char** argv) {
     std::vector<double> torque (3, 0.0);
     std::vector<double> thrust (3, 0.0);  
 
-    iErr = MPI_Init(NULL, NULL);
-    iErr = MPI_Comm_size( MPI_COMM_WORLD, &nProcs);
-    iErr = MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    // iErr = MPI_Init(NULL, NULL);
+    // iErr = MPI_Comm_size( MPI_COMM_WORLD, &nProcs);
+    // iErr = MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     double tEnd ; // This doesn't belong in the FAST - C++ interface 
     int ntEnd ; // This doesn't belong in the FAST - C++ interface
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
 
     if ( FAST.isDryRun() ) {
         FAST.end() ;
-        MPI_Finalize() ;
+        // MPI_Finalize() ;
         return 0;
     }
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
     }
 
     FAST.end() ;
-    MPI_Finalize() ;
+    // MPI_Finalize() ;
 
     return 0;
 

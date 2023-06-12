@@ -2,13 +2,13 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include "OpenFAST.H"
-#ifndef OMPI_SKIP_MPICXX
- #define OMPI_SKIP_MPICXX
-#endif
-#ifndef MPICH_SKIP_MPICXX
- #define MPICH_SKIP_MPICXX
-#endif
-#include "mpi.h"
+// #ifndef OMPI_SKIP_MPICXX
+//  #define OMPI_SKIP_MPICXX
+// #endif
+// #ifndef MPICH_SKIP_MPICXX
+//  #define MPICH_SKIP_MPICXX
+// #endif
+// #include "mpi.h"
 
 // TODO get pitch
 namespace py = pybind11;
@@ -118,7 +118,7 @@ PYBIND11_MODULE(bindings, m) {
             std::string scLibFile,
             std::vector<fast::globTurbineDataType>  globTurbineData) {
                 fast::fastInputs fi;
-                fi.comm = MPI_COMM_WORLD; // Hack to get around pybind complaining about incomplete type
+                // fi.comm = MPI_COMM_WORLD; // Hack to get around pybind complaining about incomplete type
                 fi.nTurbinesGlob = nTurbinesGlob;
                 fi.dryRun = dryRun;
                 fi.debug = debug;
