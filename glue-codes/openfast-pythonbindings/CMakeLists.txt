@@ -28,7 +28,27 @@ set_target_properties(  openfast_pythonbinding PROPERTIES
                             OUTPUT_NAME "bindings")
 set_property(TARGET openfast_pythonbinding PROPERTY LINKER_LANGUAGE CXX)
 install(TARGETS openfast_pythonbinding EXPORT OpenFASTTargets LIBRARY DESTINATION .)
-foreach(_cmake_expected_target IN ITEMS nwtclibs inflowwind_driver ifwlib ifw_c_binding unsteadyaero_driver aerodyn_driver aerodynlib aerodyn_inflow_c_binding aerodyn14lib servodynlib servodyn_driver elastodynlib beamdynlib subdynlib subdyn_driver hydrodynlib hydrodyn_driver hydrodyn_c_binding orcaflexlib orca_driver extptfm_mckflib foamfastlib sctypeslib scfastlib sclib openfastlib openfast_prelib openfast_postlib versioninfolib feamlib feam_driver moordynlib icedynlib icefloelib maplib wdlib awaelib openfastcpplib)
+foreach(_cmake_expected_target IN ITEMS 
+nwtclibs 
+inflowwind_driver ifwlib ifw_c_binding 
+unsteadyaero_driver aerodyn_driver aerodynlib aerodyn_inflow_c_binding aerodyn14lib 
+servodynlib servodyn_driver 
+elastodynlib 
+beamdynlib 
+subdynlib subdyn_driver 
+hydrodynlib hydrodyn_driver hydrodyn_c_binding 
+orcaflexlib orca_driver 
+extptfm_mckflib 
+foamfastlib foamtypeslib
+sctypeslib scfastlib sclib 
+openfastlib openfast_prelib openfast_postlib 
+versioninfolib 
+feamlib feam_driver 
+moordynlib 
+icedynlib icefloelib 
+maplib wdlib awaelib
+seastlib
+openfastcpplib)
         install(TARGETS ${_cmake_expected_target} LIBRARY DESTINATION ${Python_ROOT_DIR}/lib)
 endforeach()
 
