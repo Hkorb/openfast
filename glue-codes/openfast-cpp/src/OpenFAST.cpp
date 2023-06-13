@@ -215,7 +215,7 @@ void fast::OpenFAST::init() {
         //             &dtFAST,
         //             &numBlades[iTurb],
         //             &numVelPtsBlade[iTurb],
-                    &nodeClusterType,
+                    // &nodeClusterType,
         //             &cDriver_Input_from_FAST[iTurb],
         //             &cDriver_Output_to_FAST[iTurb],
         //             &sc.ip_from_FAST[iTurb],
