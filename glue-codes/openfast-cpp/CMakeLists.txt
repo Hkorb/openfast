@@ -49,7 +49,7 @@ target_include_directories(openfastcpplib PUBLIC
   ${LIBXML2_INCLUDE_DIR}
   # ${MPI_INCLUDE_PATH}
 )
-set_target_properties(openfastcpplib PROPERTIES PUBLIC_HEADER "src/OpenFAST.H;src/SC.h")
+set_target_properties(openfastcpplib PROPERTIES PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/OpenFAST.H;${CMAKE_CURRENT_SOURCE_DIR}/src/SC.h")
 
 add_executable(openfastcpp src/FAST_Prog.cpp)
 target_link_libraries(openfastcpp 

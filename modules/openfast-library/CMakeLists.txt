@@ -75,7 +75,7 @@ target_link_libraries(openfast_postlib openfast_prelib extinflowlib scfastlib)
 target_include_directories(openfast_postlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER src/FAST_Library.h)
+set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/FAST_Library.h)
 
 # OpenFAST Library static (openfast, FAST.Farm, Simulink)
 add_library(openfastlib_static INTERFACE)

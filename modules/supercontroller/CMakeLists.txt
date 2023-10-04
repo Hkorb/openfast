@@ -33,7 +33,7 @@ target_include_directories(scfastlib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
 target_link_libraries(scfastlib openfast_prelib)
-set_target_properties(scfastlib PROPERTIES PUBLIC_HEADER "src/SuperController_Types.h;src/SCDataEx_Types.h")
+set_target_properties(scfastlib PROPERTIES PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/SuperController_Types.h;${CMAKE_CURRENT_SOURCE_DIR}/src/SCDataEx_Types.h")
 
 add_library(sclib SHARED
   src/SC_DLL.F90

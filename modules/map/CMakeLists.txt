@@ -47,7 +47,7 @@ target_include_directories(maplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
-set_target_properties(maplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h)
+set_target_properties(maplib PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/MAP_Types.h)
 
 install(TARGETS maplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
