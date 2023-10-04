@@ -40,7 +40,7 @@ USE AeroDyn_Types
 USE SubDyn_Types
 USE HydroDyn_Types
 USE IceFloe_Types
-USE OpenFOAM_Types
+USE ExternalInflow_Types
 USE SCDataEx_Types
 USE IceDyn_Types
 USE FEAMooring_Types
@@ -54,7 +54,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_None = 0      ! No module selected [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Glue = 1      ! Glue code [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IfW = 2      ! InflowWind [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_OpFM = 3      ! OpenFOAM [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3      ! ExternalInflow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED = 4      ! ElastoDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD = 5      ! BeamDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD14 = 6      ! AeroDyn14 [-]
@@ -73,6 +73,12 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 18      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch = 1      ! pitch [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR = 2      ! TSR [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_WS = 3      ! wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed = 4      ! rotor speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err = 5      ! err in the ss solve [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter = 6      ! number of iterations [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -109,6 +115,14 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_phase      !< phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
   END TYPE FAST_VTK_ModeShapeType
 ! =======================
+! =========  FAST_SS_CaseType  =======
+  TYPE, PUBLIC :: FAST_SS_CaseType
+    REAL(ReKi)  :: RotSpeed      !< Rotor speed for this case of the steady-state solve [>0] [(rad/s)]
+    REAL(ReKi)  :: TSR      !< TSR for this case of the steady-state solve [>0] [(-)]
+    REAL(ReKi)  :: WindSpeed      !< Windspeed for this case of the steady-state solve [>0] [(m/s)]
+    REAL(ReKi)  :: Pitch      !< Pitch angle for this case of the steady-state solve [(rad)]
+  END TYPE FAST_SS_CaseType
+! =======================
 ! =========  FAST_ParameterType  =======
   TYPE, PUBLIC :: FAST_ParameterType
     REAL(DbKi)  :: DT      !< Integration time step [global time] [s]
@@ -118,7 +132,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax      !< Total run time [s]
     INTEGER(IntKi)  :: InterpOrder      !< Interpolation order {0,1,2} [-]
     INTEGER(IntKi)  :: NumCrctn      !< Number of correction iterations [-]
-    INTEGER(IntKi)  :: KMax      !< Maximum number of input-output-solve iterations (KMax >= 1) [-]
+    INTEGER(IntKi)  :: KMax      !< Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0] [-]
     INTEGER(IntKi)  :: numIceLegs      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
     INTEGER(IntKi)  :: nBeams      !< number of BeamDyn instances [-]
     LOGICAL  :: BD_OutputSibling      !< flag to determine if BD input is sibling of output mesh [-]
@@ -128,7 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
     INTEGER(IntKi)  :: SolveOption      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
     INTEGER(IntKi)  :: CompElast      !< Compute blade loads (switch) {Module_ED; Module_BD} [-]
-    INTEGER(IntKi)  :: CompInflow      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM} [-]
+    INTEGER(IntKi)  :: CompInflow      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw} [-]
     INTEGER(IntKi)  :: CompAero      !< Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD} [-]
     INTEGER(IntKi)  :: CompServo      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
@@ -168,7 +182,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime      !< Number of time steps between writing checkpoint files [-]
     INTEGER(IntKi)  :: n_DT_Out      !< Number of time steps between writing a line in the time-marching output files [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
-    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating [-]
     LOGICAL  :: WrBinOutFile      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile      !< Write a text (formatted) output file? (.out) [-]
     INTEGER(IntKi)  :: WrBinMod      !< If writing binary, which file format is to be written [1, 2, or 3] [-]
@@ -205,6 +218,17 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Lin_NumMods      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(NumModules)  :: Lin_ModOrder      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     INTEGER(IntKi)  :: LinInterpOrder      !< Interpolation order for CalcSteady solution [-]
+    LOGICAL  :: CompAeroMaps      !< Flag to determine if we are calculating aero maps [-]
+    INTEGER(IntKi)  :: N_UJac      !< Number of iterations between re-calculating Jacobian [(-)]
+    INTEGER(IntKi)  :: NumBl_Lin      !< number of blades in the jacobian [-]
+    REAL(R8Ki)  :: tolerSquared      !< Convergence tolerance for nonlinear solve residual equation [>0] squared [(-)]
+    INTEGER(IntKi)  :: NumSSCases      !< Number of cases for steady-state solver generation [>0] [(-)]
+    INTEGER(IntKi)  :: WindSpeedOrTSR      !< Choice of swept parameter (switch) { 1:wind speed; 2: TSR } [(-)]
+    REAL(ReKi)  :: RotSpeedInit      !< Initial rotor speed for steady-state solve [>0] [(rad/s)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RotSpeed      !< List of rotor speeds for steady-state solve [>0] [(rad/s)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WS_TSR      !< List of WindSpeed or TSRs (depending on WindSpeedOrTSR setting) for aeromap generation [(m/s or -)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Pitch      !< List of pitch angles for aeromap generation [(rad)]
+    INTEGER(IntKi)  :: GearBox_index      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
   END TYPE FAST_ParameterType
 ! =======================
 ! =========  FAST_LinStateSave  =======
@@ -362,7 +386,7 @@ IMPLICIT NONE
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen      !< width of the column headers output in the text and/or binary file [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
-    REAL(ReKi) , DIMENSION(1:5)  :: DriverWriteOutput      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: DriverWriteOutput      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed [-]
   END TYPE FAST_OutputFileType
 ! =======================
 ! =========  IceDyn_Data  =======
@@ -473,13 +497,13 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE InflowWind_Data
 ! =======================
-! =========  OpenFOAM_Data  =======
-  TYPE, PUBLIC :: OpenFOAM_Data
-    TYPE(OpFM_InputType)  :: u      !< System inputs [-]
-    TYPE(OpFM_OutputType)  :: y      !< System outputs [-]
-    TYPE(OpFM_ParameterType)  :: p      !< Parameters [-]
-    TYPE(OpFM_MiscVarType)  :: m      !< Parameters [-]
-  END TYPE OpenFOAM_Data
+! =========  ExternalInflow_Data  =======
+  TYPE, PUBLIC :: ExternalInflow_Data
+    TYPE(ExtInfw_InputType)  :: u      !< System inputs [-]
+    TYPE(ExtInfw_OutputType)  :: y      !< System outputs [-]
+    TYPE(ExtInfw_ParameterType)  :: p      !< Parameters [-]
+    TYPE(ExtInfw_MiscVarType)  :: m      !< Parameters [-]
+  END TYPE ExternalInflow_Data
 ! =======================
 ! =========  SCDataEx_Data  =======
   TYPE, PUBLIC :: SCDataEx_Data
@@ -686,6 +710,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_BD_Distrload      !< copy of BD DistrLoad input meshes [-]
     TYPE(MeshType)  :: u_Orca_PtfmMesh      !< copy of Orca PtfmMesh input mesh [-]
     TYPE(MeshType)  :: u_ExtPtfm_PtfmMesh      !< copy of ExtPtfm_MCKF PtfmMesh input mesh [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: HubOrient      !< Orientation matrix to translate results from blade 1 to remaining blades in aeromaps [(-)]
   END TYPE FAST_ModuleMapType
 ! =======================
 ! =========  FAST_ExternInputType  =======
@@ -731,8 +756,8 @@ IMPLICIT NONE
     TYPE(AD_InitOutputType)  :: OutData_AD      !< AD Initialization output data [-]
     TYPE(InflowWind_InitInputType)  :: InData_IfW      !< IfW Initialization input data [-]
     TYPE(InflowWind_InitOutputType)  :: OutData_IfW      !< IfW Initialization output data [-]
-    TYPE(OpFM_InitInputType)  :: InData_OpFM      !< OpFM Initialization input data [-]
-    TYPE(OpFM_InitOutputType)  :: OutData_OpFM      !< OpFM Initialization output data [-]
+    TYPE(ExtInfw_InitInputType)  :: InData_ExtInfw      !< ExtInfw Initialization input data [-]
+    TYPE(ExtInfw_InitOutputType)  :: OutData_ExtInfw      !< ExtInfw Initialization output data [-]
     TYPE(SeaSt_InitInputType)  :: InData_SeaSt      !< SeaSt Initialization input data [-]
     TYPE(SeaSt_InitOutputType)  :: OutData_SeaSt      !< SeaSt Initialization output data [-]
     TYPE(HydroDyn_InitInputType)  :: InData_HD      !< HD Initialization input data [-]
@@ -791,7 +816,7 @@ IMPLICIT NONE
     TYPE(AeroDyn_Data)  :: AD      !< Data for the AeroDyn module [-]
     TYPE(AeroDyn14_Data)  :: AD14      !< Data for the AeroDyn14 module [-]
     TYPE(InflowWind_Data)  :: IfW      !< Data for InflowWind module [-]
-    TYPE(OpenFOAM_Data)  :: OpFM      !< Data for OpenFOAM integration module [-]
+    TYPE(ExternalInflow_Data)  :: ExtInfw      !< Data for ExternalInflow integration module [-]
     TYPE(SCDataEx_Data)  :: SC_DX      !< Data for SuperController integration module [-]
     TYPE(SeaState_Data)  :: SeaSt      !< Data for the SeaState module [-]
     TYPE(HydroDyn_Data)  :: HD      !< Data for the HydroDyn module [-]
@@ -2136,6 +2161,161 @@ ENDIF
   END IF
  END SUBROUTINE FAST_UnPackVTK_ModeShapeType
 
+ SUBROUTINE FAST_CopySS_CaseType( SrcSS_CaseTypeData, DstSS_CaseTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(FAST_SS_CaseType), INTENT(IN) :: SrcSS_CaseTypeData
+   TYPE(FAST_SS_CaseType), INTENT(INOUT) :: DstSS_CaseTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopySS_CaseType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstSS_CaseTypeData%RotSpeed = SrcSS_CaseTypeData%RotSpeed
+    DstSS_CaseTypeData%TSR = SrcSS_CaseTypeData%TSR
+    DstSS_CaseTypeData%WindSpeed = SrcSS_CaseTypeData%WindSpeed
+    DstSS_CaseTypeData%Pitch = SrcSS_CaseTypeData%Pitch
+ END SUBROUTINE FAST_CopySS_CaseType
+
+ SUBROUTINE FAST_DestroySS_CaseType( SS_CaseTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(FAST_SS_CaseType), INTENT(INOUT) :: SS_CaseTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FAST_DestroySS_CaseType'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+ END SUBROUTINE FAST_DestroySS_CaseType
+
+ SUBROUTINE FAST_PackSS_CaseType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(FAST_SS_CaseType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_PackSS_CaseType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! TSR
+      Re_BufSz   = Re_BufSz   + 1  ! WindSpeed
+      Re_BufSz   = Re_BufSz   + 1  ! Pitch
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+    ReKiBuf(Re_Xferred) = InData%RotSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TSR
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WindSpeed
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Pitch
+    Re_Xferred = Re_Xferred + 1
+ END SUBROUTINE FAST_PackSS_CaseType
+
+ SUBROUTINE FAST_UnPackSS_CaseType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(FAST_SS_CaseType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackSS_CaseType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+    OutData%RotSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%TSR = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WindSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Pitch = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+ END SUBROUTINE FAST_UnPackSS_CaseType
+
  SUBROUTINE FAST_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType), INTENT(IN) :: SrcParamData
    TYPE(FAST_ParameterType), INTENT(INOUT) :: DstParamData
@@ -2208,7 +2388,6 @@ ENDIF
     DstParamData%n_ChkptTime = SrcParamData%n_ChkptTime
     DstParamData%n_DT_Out = SrcParamData%n_DT_Out
     DstParamData%n_VTKTime = SrcParamData%n_VTKTime
-    DstParamData%TurbineType = SrcParamData%TurbineType
     DstParamData%WrBinOutFile = SrcParamData%WrBinOutFile
     DstParamData%WrTxtOutFile = SrcParamData%WrTxtOutFile
     DstParamData%WrBinMod = SrcParamData%WrBinMod
@@ -2249,6 +2428,50 @@ ENDIF
     DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
     DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
     DstParamData%LinInterpOrder = SrcParamData%LinInterpOrder
+    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
+    DstParamData%N_UJac = SrcParamData%N_UJac
+    DstParamData%NumBl_Lin = SrcParamData%NumBl_Lin
+    DstParamData%tolerSquared = SrcParamData%tolerSquared
+    DstParamData%NumSSCases = SrcParamData%NumSSCases
+    DstParamData%WindSpeedOrTSR = SrcParamData%WindSpeedOrTSR
+    DstParamData%RotSpeedInit = SrcParamData%RotSpeedInit
+IF (ALLOCATED(SrcParamData%RotSpeed)) THEN
+  i1_l = LBOUND(SrcParamData%RotSpeed,1)
+  i1_u = UBOUND(SrcParamData%RotSpeed,1)
+  IF (.NOT. ALLOCATED(DstParamData%RotSpeed)) THEN 
+    ALLOCATE(DstParamData%RotSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%RotSpeed.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%RotSpeed = SrcParamData%RotSpeed
+ENDIF
+IF (ALLOCATED(SrcParamData%WS_TSR)) THEN
+  i1_l = LBOUND(SrcParamData%WS_TSR,1)
+  i1_u = UBOUND(SrcParamData%WS_TSR,1)
+  IF (.NOT. ALLOCATED(DstParamData%WS_TSR)) THEN 
+    ALLOCATE(DstParamData%WS_TSR(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WS_TSR.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%WS_TSR = SrcParamData%WS_TSR
+ENDIF
+IF (ALLOCATED(SrcParamData%Pitch)) THEN
+  i1_l = LBOUND(SrcParamData%Pitch,1)
+  i1_u = UBOUND(SrcParamData%Pitch,1)
+  IF (.NOT. ALLOCATED(DstParamData%Pitch)) THEN 
+    ALLOCATE(DstParamData%Pitch(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Pitch.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%Pitch = SrcParamData%Pitch
+ENDIF
+    DstParamData%GearBox_index = SrcParamData%GearBox_index
  END SUBROUTINE FAST_CopyParam
 
  SUBROUTINE FAST_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2276,6 +2499,15 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL FAST_Destroyvtk_modeshapetype( ParamData%VTK_modes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ALLOCATED(ParamData%RotSpeed)) THEN
+  DEALLOCATE(ParamData%RotSpeed)
+ENDIF
+IF (ALLOCATED(ParamData%WS_TSR)) THEN
+  DEALLOCATE(ParamData%WS_TSR)
+ENDIF
+IF (ALLOCATED(ParamData%Pitch)) THEN
+  DEALLOCATE(ParamData%Pitch)
+ENDIF
  END SUBROUTINE FAST_DestroyParam
 
  SUBROUTINE FAST_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2370,7 +2602,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! n_ChkptTime
       Int_BufSz  = Int_BufSz  + 1  ! n_DT_Out
       Int_BufSz  = Int_BufSz  + 1  ! n_VTKTime
-      Int_BufSz  = Int_BufSz  + 1  ! TurbineType
       Int_BufSz  = Int_BufSz  + 1  ! WrBinOutFile
       Int_BufSz  = Int_BufSz  + 1  ! WrTxtOutFile
       Int_BufSz  = Int_BufSz  + 1  ! WrBinMod
@@ -2440,6 +2671,29 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Lin_NumMods
       Int_BufSz  = Int_BufSz  + SIZE(InData%Lin_ModOrder)  ! Lin_ModOrder
       Int_BufSz  = Int_BufSz  + 1  ! LinInterpOrder
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
+      Int_BufSz  = Int_BufSz  + 1  ! N_UJac
+      Int_BufSz  = Int_BufSz  + 1  ! NumBl_Lin
+      Db_BufSz   = Db_BufSz   + 1  ! tolerSquared
+      Int_BufSz  = Int_BufSz  + 1  ! NumSSCases
+      Int_BufSz  = Int_BufSz  + 1  ! WindSpeedOrTSR
+      Re_BufSz   = Re_BufSz   + 1  ! RotSpeedInit
+  Int_BufSz   = Int_BufSz   + 1     ! RotSpeed allocated yes/no
+  IF ( ALLOCATED(InData%RotSpeed) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! RotSpeed upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RotSpeed)  ! RotSpeed
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WS_TSR allocated yes/no
+  IF ( ALLOCATED(InData%WS_TSR) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! WS_TSR upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WS_TSR)  ! WS_TSR
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Pitch allocated yes/no
+  IF ( ALLOCATED(InData%Pitch) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Pitch upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Pitch)  ! Pitch
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! GearBox_index
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2613,8 +2867,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%n_VTKTime
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%TurbineType
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WrBinOutFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WrTxtOutFile, IntKiBuf(1))
@@ -2754,6 +3006,67 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO
     IntKiBuf(Int_Xferred) = InData%LinInterpOrder
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%N_UJac
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBl_Lin
+    Int_Xferred = Int_Xferred + 1
+    DbKiBuf(Db_Xferred) = InData%tolerSquared
+    Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumSSCases
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WindSpeedOrTSR
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotSpeedInit
+    Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%RotSpeed) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RotSpeed,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RotSpeed,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%RotSpeed,1), UBOUND(InData%RotSpeed,1)
+        ReKiBuf(Re_Xferred) = InData%RotSpeed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WS_TSR) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WS_TSR,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WS_TSR,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%WS_TSR,1), UBOUND(InData%WS_TSR,1)
+        ReKiBuf(Re_Xferred) = InData%WS_TSR(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Pitch) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Pitch,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Pitch,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Pitch,1), UBOUND(InData%Pitch,1)
+        ReKiBuf(Re_Xferred) = InData%Pitch(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%GearBox_index
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_PackParam
 
@@ -2942,8 +3255,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%n_VTKTime = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%TurbineType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
     OutData%WrBinOutFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%WrBinOutFile)
     Int_Xferred = Int_Xferred + 1
     OutData%WrTxtOutFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%WrTxtOutFile)
@@ -3109,6 +3420,76 @@ ENDIF
       Int_Xferred = Int_Xferred + 1
     END DO
     OutData%LinInterpOrder = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
+    Int_Xferred = Int_Xferred + 1
+    OutData%N_UJac = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBl_Lin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%tolerSquared = REAL(DbKiBuf(Db_Xferred), R8Ki)
+    Db_Xferred = Db_Xferred + 1
+    OutData%NumSSCases = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WindSpeedOrTSR = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%RotSpeedInit = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RotSpeed not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%RotSpeed)) DEALLOCATE(OutData%RotSpeed)
+    ALLOCATE(OutData%RotSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotSpeed.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%RotSpeed,1), UBOUND(OutData%RotSpeed,1)
+        OutData%RotSpeed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WS_TSR not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WS_TSR)) DEALLOCATE(OutData%WS_TSR)
+    ALLOCATE(OutData%WS_TSR(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WS_TSR.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%WS_TSR,1), UBOUND(OutData%WS_TSR,1)
+        OutData%WS_TSR(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Pitch not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Pitch)) DEALLOCATE(OutData%Pitch)
+    ALLOCATE(OutData%Pitch(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Pitch.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Pitch,1), UBOUND(OutData%Pitch,1)
+        OutData%Pitch(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%GearBox_index = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_UnPackParam
 
@@ -26103,9 +26484,9 @@ ENDIF
   END IF
  END SUBROUTINE FAST_UnPackInflowWind_Data
 
- SUBROUTINE FAST_CopyOpenFOAM_Data( SrcOpenFOAM_DataData, DstOpenFOAM_DataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(OpenFOAM_Data), INTENT(INOUT) :: SrcOpenFOAM_DataData
-   TYPE(OpenFOAM_Data), INTENT(INOUT) :: DstOpenFOAM_DataData
+ SUBROUTINE FAST_CopyExternalInflow_Data( SrcExternalInflow_DataData, DstExternalInflow_DataData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(ExternalInflow_Data), INTENT(INOUT) :: SrcExternalInflow_DataData
+   TYPE(ExternalInflow_Data), INTENT(INOUT) :: DstExternalInflow_DataData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -26113,26 +26494,26 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopyOpenFOAM_Data'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopyExternalInflow_Data'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-      CALL OpFM_CopyInput( SrcOpenFOAM_DataData%u, DstOpenFOAM_DataData%u, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyInput( SrcExternalInflow_DataData%u, DstExternalInflow_DataData%u, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL OpFM_CopyOutput( SrcOpenFOAM_DataData%y, DstOpenFOAM_DataData%y, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyOutput( SrcExternalInflow_DataData%y, DstExternalInflow_DataData%y, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL OpFM_CopyParam( SrcOpenFOAM_DataData%p, DstOpenFOAM_DataData%p, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyParam( SrcExternalInflow_DataData%p, DstExternalInflow_DataData%p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL OpFM_CopyMisc( SrcOpenFOAM_DataData%m, DstOpenFOAM_DataData%m, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyMisc( SrcExternalInflow_DataData%m, DstExternalInflow_DataData%m, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE FAST_CopyOpenFOAM_Data
+ END SUBROUTINE FAST_CopyExternalInflow_Data
 
- SUBROUTINE FAST_DestroyOpenFOAM_Data( OpenFOAM_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(OpenFOAM_Data), INTENT(INOUT) :: OpenFOAM_DataData
+ SUBROUTINE FAST_DestroyExternalInflow_Data( ExternalInflow_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(ExternalInflow_Data), INTENT(INOUT) :: ExternalInflow_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
@@ -26141,7 +26522,7 @@ ENDIF
   LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FAST_DestroyOpenFOAM_Data'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FAST_DestroyExternalInflow_Data'
 
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -26152,21 +26533,21 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL OpFM_DestroyInput( OpenFOAM_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyInput( ExternalInflow_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL OpFM_DestroyOutput( OpenFOAM_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyOutput( ExternalInflow_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL OpFM_DestroyParam( OpenFOAM_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyParam( ExternalInflow_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL OpFM_DestroyMisc( OpenFOAM_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyMisc( ExternalInflow_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE FAST_DestroyOpenFOAM_Data
+ END SUBROUTINE FAST_DestroyExternalInflow_Data
 
- SUBROUTINE FAST_PackOpenFOAM_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE FAST_PackExternalInflow_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(OpenFOAM_Data),  INTENT(IN) :: InData
+  TYPE(ExternalInflow_Data),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -26181,7 +26562,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_PackOpenFOAM_Data'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_PackExternalInflow_Data'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -26199,7 +26580,7 @@ ENDIF
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! u: size of buffers for each call to pack subtype
-      CALL OpFM_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, .TRUE. ) ! u 
+      CALL ExtInfw_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, .TRUE. ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26216,7 +26597,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! y: size of buffers for each call to pack subtype
-      CALL OpFM_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, .TRUE. ) ! y 
+      CALL ExtInfw_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, .TRUE. ) ! y 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26233,7 +26614,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! p: size of buffers for each call to pack subtype
-      CALL OpFM_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%p, ErrStat2, ErrMsg2, .TRUE. ) ! p 
+      CALL ExtInfw_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%p, ErrStat2, ErrMsg2, .TRUE. ) ! p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26250,7 +26631,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! m: size of buffers for each call to pack subtype
-      CALL OpFM_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%m, ErrStat2, ErrMsg2, .TRUE. ) ! m 
+      CALL ExtInfw_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%m, ErrStat2, ErrMsg2, .TRUE. ) ! m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26293,7 +26674,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL OpFM_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, OnlySize ) ! u 
+      CALL ExtInfw_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u, ErrStat2, ErrMsg2, OnlySize ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26321,7 +26702,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL OpFM_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, OnlySize ) ! y 
+      CALL ExtInfw_PackOutput( Re_Buf, Db_Buf, Int_Buf, InData%y, ErrStat2, ErrMsg2, OnlySize ) ! y 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26349,7 +26730,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL OpFM_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%p, ErrStat2, ErrMsg2, OnlySize ) ! p 
+      CALL ExtInfw_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%p, ErrStat2, ErrMsg2, OnlySize ) ! p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26377,7 +26758,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL OpFM_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%m, ErrStat2, ErrMsg2, OnlySize ) ! m 
+      CALL ExtInfw_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%m, ErrStat2, ErrMsg2, OnlySize ) ! m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26405,13 +26786,13 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
- END SUBROUTINE FAST_PackOpenFOAM_Data
+ END SUBROUTINE FAST_PackExternalInflow_Data
 
- SUBROUTINE FAST_UnPackOpenFOAM_Data( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE FAST_UnPackExternalInflow_Data( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(OpenFOAM_Data), INTENT(INOUT) :: OutData
+  TYPE(ExternalInflow_Data), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -26422,7 +26803,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackOpenFOAM_Data'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackExternalInflow_Data'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -26466,7 +26847,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackInput( Re_Buf, Db_Buf, Int_Buf, OutData%u, ErrStat2, ErrMsg2 ) ! u 
+      CALL ExtInfw_UnpackInput( Re_Buf, Db_Buf, Int_Buf, OutData%u, ErrStat2, ErrMsg2 ) ! u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26506,7 +26887,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackOutput( Re_Buf, Db_Buf, Int_Buf, OutData%y, ErrStat2, ErrMsg2 ) ! y 
+      CALL ExtInfw_UnpackOutput( Re_Buf, Db_Buf, Int_Buf, OutData%y, ErrStat2, ErrMsg2 ) ! y 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26546,7 +26927,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%p, ErrStat2, ErrMsg2 ) ! p 
+      CALL ExtInfw_UnpackParam( Re_Buf, Db_Buf, Int_Buf, OutData%p, ErrStat2, ErrMsg2 ) ! p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -26586,14 +26967,14 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackMisc( Re_Buf, Db_Buf, Int_Buf, OutData%m, ErrStat2, ErrMsg2 ) ! m 
+      CALL ExtInfw_UnpackMisc( Re_Buf, Db_Buf, Int_Buf, OutData%m, ErrStat2, ErrMsg2 ) ! m 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE FAST_UnPackOpenFOAM_Data
+ END SUBROUTINE FAST_UnPackExternalInflow_Data
 
  SUBROUTINE FAST_CopySCDataEx_Data( SrcSCDataEx_DataData, DstSCDataEx_DataData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SCDataEx_Data), INTENT(IN) :: SrcSCDataEx_DataData
@@ -38042,6 +38423,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopyModuleMapType'
@@ -38574,6 +38956,22 @@ ENDIF
       CALL MeshCopy( SrcModuleMapTypeData%u_ExtPtfm_PtfmMesh, DstModuleMapTypeData%u_ExtPtfm_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcModuleMapTypeData%HubOrient)) THEN
+  i1_l = LBOUND(SrcModuleMapTypeData%HubOrient,1)
+  i1_u = UBOUND(SrcModuleMapTypeData%HubOrient,1)
+  i2_l = LBOUND(SrcModuleMapTypeData%HubOrient,2)
+  i2_u = UBOUND(SrcModuleMapTypeData%HubOrient,2)
+  i3_l = LBOUND(SrcModuleMapTypeData%HubOrient,3)
+  i3_u = UBOUND(SrcModuleMapTypeData%HubOrient,3)
+  IF (.NOT. ALLOCATED(DstModuleMapTypeData%HubOrient)) THEN 
+    ALLOCATE(DstModuleMapTypeData%HubOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%HubOrient.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstModuleMapTypeData%HubOrient = SrcModuleMapTypeData%HubOrient
+ENDIF
  END SUBROUTINE FAST_CopyModuleMapType
 
  SUBROUTINE FAST_DestroyModuleMapType( ModuleMapTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -38843,6 +39241,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( ModuleMapTypeData%u_ExtPtfm_PtfmMesh, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ALLOCATED(ModuleMapTypeData%HubOrient)) THEN
+  DEALLOCATE(ModuleMapTypeData%HubOrient)
+ENDIF
  END SUBROUTINE FAST_DestroyModuleMapType
 
  SUBROUTINE FAST_PackModuleMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -40011,6 +40412,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! HubOrient allocated yes/no
+  IF ( ALLOCATED(InData%HubOrient) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! HubOrient upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%HubOrient)  ! HubOrient
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -42008,6 +42414,31 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%HubOrient) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%HubOrient,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HubOrient,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%HubOrient,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HubOrient,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%HubOrient,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%HubOrient,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%HubOrient,3), UBOUND(InData%HubOrient,3)
+        DO i2 = LBOUND(InData%HubOrient,2), UBOUND(InData%HubOrient,2)
+          DO i1 = LBOUND(InData%HubOrient,1), UBOUND(InData%HubOrient,1)
+            DbKiBuf(Db_Xferred) = InData%HubOrient(i1,i2,i3)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
  END SUBROUTINE FAST_PackModuleMapType
 
  SUBROUTINE FAST_UnPackModuleMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -42025,6 +42456,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackModuleMapType'
@@ -44770,6 +45202,34 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! HubOrient not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%HubOrient)) DEALLOCATE(OutData%HubOrient)
+    ALLOCATE(OutData%HubOrient(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%HubOrient.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%HubOrient,3), UBOUND(OutData%HubOrient,3)
+        DO i2 = LBOUND(OutData%HubOrient,2), UBOUND(OutData%HubOrient,2)
+          DO i1 = LBOUND(OutData%HubOrient,1), UBOUND(OutData%HubOrient,1)
+            OutData%HubOrient(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+            Db_Xferred = Db_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
  END SUBROUTINE FAST_UnPackModuleMapType
 
  SUBROUTINE FAST_CopyExternInputType( SrcExternInputTypeData, DstExternInputTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -45439,10 +45899,10 @@ ENDIF
       CALL InflowWind_CopyInitOutput( SrcInitDataData%OutData_IfW, DstInitDataData%OutData_IfW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL OpFM_CopyInitInput( SrcInitDataData%InData_OpFM, DstInitDataData%InData_OpFM, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyInitInput( SrcInitDataData%InData_ExtInfw, DstInitDataData%InData_ExtInfw, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL OpFM_CopyInitOutput( SrcInitDataData%OutData_OpFM, DstInitDataData%OutData_OpFM, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL ExtInfw_CopyInitOutput( SrcInitDataData%OutData_ExtInfw, DstInitDataData%OutData_ExtInfw, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL SeaSt_CopyInitInput( SrcInitDataData%InData_SeaSt, DstInitDataData%InData_SeaSt, CtrlCode, ErrStat2, ErrMsg2 )
@@ -45557,9 +46017,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL InflowWind_DestroyInitOutput( InitDataData%OutData_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL OpFM_DestroyInitInput( InitDataData%InData_OpFM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyInitInput( InitDataData%InData_ExtInfw, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL OpFM_DestroyInitOutput( InitDataData%OutData_OpFM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL ExtInfw_DestroyInitOutput( InitDataData%OutData_ExtInfw, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL SeaSt_DestroyInitInput( InitDataData%InData_SeaSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -45849,37 +46309,37 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! InData_OpFM: size of buffers for each call to pack subtype
-      CALL OpFM_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%InData_OpFM, ErrStat2, ErrMsg2, .TRUE. ) ! InData_OpFM 
+      Int_BufSz   = Int_BufSz + 3  ! InData_ExtInfw: size of buffers for each call to pack subtype
+      CALL ExtInfw_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%InData_ExtInfw, ErrStat2, ErrMsg2, .TRUE. ) ! InData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! InData_OpFM
+      IF(ALLOCATED(Re_Buf)) THEN ! InData_ExtInfw
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! InData_OpFM
+      IF(ALLOCATED(Db_Buf)) THEN ! InData_ExtInfw
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! InData_OpFM
+      IF(ALLOCATED(Int_Buf)) THEN ! InData_ExtInfw
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! OutData_OpFM: size of buffers for each call to pack subtype
-      CALL OpFM_PackInitOutput( Re_Buf, Db_Buf, Int_Buf, InData%OutData_OpFM, ErrStat2, ErrMsg2, .TRUE. ) ! OutData_OpFM 
+      Int_BufSz   = Int_BufSz + 3  ! OutData_ExtInfw: size of buffers for each call to pack subtype
+      CALL ExtInfw_PackInitOutput( Re_Buf, Db_Buf, Int_Buf, InData%OutData_ExtInfw, ErrStat2, ErrMsg2, .TRUE. ) ! OutData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! OutData_OpFM
+      IF(ALLOCATED(Re_Buf)) THEN ! OutData_ExtInfw
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! OutData_OpFM
+      IF(ALLOCATED(Db_Buf)) THEN ! OutData_ExtInfw
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! OutData_OpFM
+      IF(ALLOCATED(Int_Buf)) THEN ! OutData_ExtInfw
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -46599,7 +47059,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL OpFM_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%InData_OpFM, ErrStat2, ErrMsg2, OnlySize ) ! InData_OpFM 
+      CALL ExtInfw_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%InData_ExtInfw, ErrStat2, ErrMsg2, OnlySize ) ! InData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -46627,7 +47087,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL OpFM_PackInitOutput( Re_Buf, Db_Buf, Int_Buf, InData%OutData_OpFM, ErrStat2, ErrMsg2, OnlySize ) ! OutData_OpFM 
+      CALL ExtInfw_PackInitOutput( Re_Buf, Db_Buf, Int_Buf, InData%OutData_ExtInfw, ErrStat2, ErrMsg2, OnlySize ) ! OutData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -47773,7 +48233,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackInitInput( Re_Buf, Db_Buf, Int_Buf, OutData%InData_OpFM, ErrStat2, ErrMsg2 ) ! InData_OpFM 
+      CALL ExtInfw_UnpackInitInput( Re_Buf, Db_Buf, Int_Buf, OutData%InData_ExtInfw, ErrStat2, ErrMsg2 ) ! InData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -47813,7 +48273,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL OpFM_UnpackInitOutput( Re_Buf, Db_Buf, Int_Buf, OutData%OutData_OpFM, ErrStat2, ErrMsg2 ) ! OutData_OpFM 
+      CALL ExtInfw_UnpackInitOutput( Re_Buf, Db_Buf, Int_Buf, OutData%OutData_ExtInfw, ErrStat2, ErrMsg2 ) ! OutData_ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -49036,7 +49496,7 @@ ENDIF
       CALL FAST_Copyinflowwind_data( SrcTurbineTypeData%IfW, DstTurbineTypeData%IfW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL FAST_Copyopenfoam_data( SrcTurbineTypeData%OpFM, DstTurbineTypeData%OpFM, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL FAST_Copyexternalinflow_data( SrcTurbineTypeData%ExtInfw, DstTurbineTypeData%ExtInfw, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL FAST_Copyscdataex_data( SrcTurbineTypeData%SC_DX, DstTurbineTypeData%SC_DX, CtrlCode, ErrStat2, ErrMsg2 )
@@ -49115,7 +49575,7 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL FAST_Destroyinflowwind_data( TurbineTypeData%IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FAST_Destroyopenfoam_data( TurbineTypeData%OpFM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FAST_Destroyexternalinflow_data( TurbineTypeData%ExtInfw, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL FAST_Destroyscdataex_data( TurbineTypeData%SC_DX, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -49348,20 +49808,20 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! OpFM: size of buffers for each call to pack subtype
-      CALL FAST_Packopenfoam_data( Re_Buf, Db_Buf, Int_Buf, InData%OpFM, ErrStat2, ErrMsg2, .TRUE. ) ! OpFM 
+      Int_BufSz   = Int_BufSz + 3  ! ExtInfw: size of buffers for each call to pack subtype
+      CALL FAST_Packexternalinflow_data( Re_Buf, Db_Buf, Int_Buf, InData%ExtInfw, ErrStat2, ErrMsg2, .TRUE. ) ! ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! OpFM
+      IF(ALLOCATED(Re_Buf)) THEN ! ExtInfw
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! OpFM
+      IF(ALLOCATED(Db_Buf)) THEN ! ExtInfw
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! OpFM
+      IF(ALLOCATED(Int_Buf)) THEN ! ExtInfw
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -49861,7 +50321,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL FAST_Packopenfoam_data( Re_Buf, Db_Buf, Int_Buf, InData%OpFM, ErrStat2, ErrMsg2, OnlySize ) ! OpFM 
+      CALL FAST_Packexternalinflow_data( Re_Buf, Db_Buf, Int_Buf, InData%ExtInfw, ErrStat2, ErrMsg2, OnlySize ) ! ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -50660,7 +51120,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL FAST_Unpackopenfoam_data( Re_Buf, Db_Buf, Int_Buf, OutData%OpFM, ErrStat2, ErrMsg2 ) ! OpFM 
+      CALL FAST_Unpackexternalinflow_data( Re_Buf, Db_Buf, Int_Buf, OutData%ExtInfw, ErrStat2, ErrMsg2 ) ! ExtInfw 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

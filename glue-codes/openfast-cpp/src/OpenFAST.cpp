@@ -70,7 +70,7 @@ void fast::OpenFAST::init() {
         //             CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
         //             currentFileName
         //         );
-        //         FAST_OpFM_Restart(
+        //         FAST_ExtInfw_Restart(
         //             &iTurb,
         //             currentFileName,
         //             &AbortErrLev,
@@ -124,7 +124,7 @@ void fast::OpenFAST::init() {
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
                     currentFileName
                 );
-                FAST_OpFM_Init(
+                FAST_ExtInfw_Init(
                     &iTurb,
                     &tMax,
                     currentFileName,
@@ -198,7 +198,7 @@ void fast::OpenFAST::init() {
         //             FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
         //             currentFileName
         //         );
-        //         FAST_OpFM_Init(
+        //         FAST_ExtInfw_Init(
         //             &iTurb,
         //             &tMax,
         //             currentFileName,
@@ -287,7 +287,7 @@ void fast::OpenFAST::solution0() {
         }
 
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            FAST_OpFM_Solution0(&iTurb, &ErrStat, ErrMsg);
+            FAST_ExtInfw_Solution0(&iTurb, &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
             
             // Update Hub
@@ -332,7 +332,7 @@ void fast::OpenFAST::step() {
             fastcpp_velocity_file.close() ;
         }
 
-        FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+        FAST_ExtInfw_Step(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
         // Compute the force from the nacelle only if the drag coefficient is
@@ -417,7 +417,7 @@ void fast::OpenFAST::stepNoWrite() {
 
         // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
         // (note OpenFOAM could do subcycling around this step)
-        FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+        FAST_ExtInfw_Step(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
         // Update Hub
@@ -506,7 +506,7 @@ void fast::OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
     }
 }
 
-void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST){
+void fast::OpenFAST::setOutputsToFAST(ExtInfw_InputType_t cDriver_Input_from_FAST, ExtInfw_OutputType_t cDriver_Output_to_FAST){
 
     // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
 
@@ -820,6 +820,8 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
         double azimuth = computeAzimuthLoc(iTurbLoc);
         double rotor_speed = computeRotorSpeedLoc(iTurbLoc);
 
+        // printf("vector lengths: u %i v %i w %i \n", cDriver_Output_to_FAST[iTurbLoc].u_Len, cDriver_Output_to_FAST[iTurbLoc].v_Len, cDriver_Output_to_FAST[iTurbLoc].w_Len);
+
         //Blade
         for(int iBlade = 0; iBlade<nBlades; iBlade++)
         {
@@ -857,8 +859,8 @@ void fast::OpenFAST::setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocit
                 cDriver_Output_to_FAST[iTurbLoc].v[iNodeVel] = c*v_interp - s*w_interp;
                 cDriver_Output_to_FAST[iTurbLoc].w[iNodeVel] = s*v_interp + c*w_interp;
 
-                printf(" Blade %d, Vel node %d / %d, u_interp %f, v_interp %f, w_interp %f, v %f w %f omega %f r %f \n", 
-                         iBlade, j, nBladeVelocityNodes, u_interp, c*v_interp - s*w_interp, s*v_interp + c*w_interp, v_interp, w_interp, rotor_speed, rDistVel);
+                // printf(" Blade %d, Vel node %d / %d, iNode %d u_interp %f, v_interp %f, w_interp %f, v %f w %f omega %f r %f \n", 
+                //          iBlade, j, nBladeVelocityNodes, iNodeVel, u_interp, c*v_interp - s*w_interp, s*v_interp + c*w_interp, v_interp, w_interp, rotor_speed, rDistVel);
             }
         }
         
@@ -959,7 +961,7 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
                 double y = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode] - originForce[1];
                 double z = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode] - originForce[2];
 
-                printf("i %d, x: %f, y: %f, z: %f fx %f fy %f fz %f\n", iNode, x, y, z, cDriver_Input_from_FAST[iTurbLoc].fx[iNode], cDriver_Input_from_FAST[iTurbLoc].fy[iNode], cDriver_Input_from_FAST[iTurbLoc].fz[iNode]);
+                // printf("i %d, x: %f, y: %f, z: %f fx %f fy %f fz %f\n", iNode, x, y, z, cDriver_Input_from_FAST[iTurbLoc].fx[iNode], cDriver_Input_from_FAST[iTurbLoc].fy[iNode], cDriver_Input_from_FAST[iTurbLoc].fz[iNode]);
                 forceNodeRadii[iForceNode] = std::sqrt(x*x + y*y + z*z);
             }
 
@@ -993,9 +995,10 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
                 double interp_fy = 0.5*(pointForcesY[jForceLower] + pointForcesY[jForceLower+1])/dr;
                 double interp_fz = 0.5*(pointForcesZ[jForceLower] + pointForcesZ[jForceLower+1])/dr;
 
-                double fy = interp_fy*c+interp_fz*s;
-                double fz = -interp_fy*s+interp_fz*c;
-                printf("iBladeNode: %d, iForceNode: %d, iExternNode: %d, radius: %f, interp_fx: %f, interp_fy: %f, interp_fz: %f \n", iBladeNode, iForceNode, iExternBladeNode, radius, interp_fx, fy, fz);
+                // double fy = interp_fy*c+interp_fz*s;
+                // double fz = -interp_fy*s+interp_fz*c;
+                
+                // printf("iBladeNode: %d, iForceNode: %d, iExternNode: %d, radius: %f, interp_fx: %f, interp_fy: %f, interp_fz: %f \n", iBladeNode, iForceNode, iExternBladeNode, radius, interp_fx, fy, fz);
 
                 blade_forces_x[iExternBladeNode] =  interp_fx;
                 blade_forces_y[iExternBladeNode] =  interp_fy*c+interp_fz*s; 
@@ -1253,7 +1256,7 @@ void fast::OpenFAST::allocateMemory() {
     // Allocate memory for Turbine datastructure for all turbines
     FAST_AllocateTurbines(&nTurbinesProc, &ErrStat, ErrMsg);
 
-    // Allocate memory for OpFM Input types in FAST
+    // Allocate memory for ExtInfw Input types in FAST
     cDriver_Input_from_FAST.resize(nTurbinesProc) ;
     cDriver_Output_to_FAST.resize(nTurbinesProc) ;
 
@@ -1399,7 +1402,7 @@ void fast::OpenFAST::end() {
 //     velDataFile = openVelocityDataFile(false);
 // }
 
-// void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
+// void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, ExtInfw_InputType_t iData, ExtInfw_OutputType_t oData) {
 
 //     hsize_t start[3]; start[0] = iTimestep; start[1] = 0; start[2] = 0;
 //     int nVelPts = get_numVelPtsLoc(iTurb) ;
@@ -1433,7 +1436,7 @@ void fast::OpenFAST::end() {
 
 // }
 
-// void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
+// void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
 //     int nVelPts = get_numVelPtsLoc(iTurb);
 //     for (int j = 0; j < nVelPts; j++){
 //         cDriver_Output_to_FAST.u[j] = velData[(iPrestart*nVelPts+j)*6 + 3];
