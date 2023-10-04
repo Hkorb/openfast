@@ -39,7 +39,7 @@ subdynlib subdyn_driver
 hydrodynlib hydrodyn_driver hydrodyn_c_binding 
 orcaflexlib orca_driver 
 extptfm_mckflib 
-foamfastlib foamtypeslib
+extinflowlib extinflowtypeslib
 sctypeslib scfastlib sclib 
 openfastlib openfast_prelib openfast_postlib 
 versioninfolib 
