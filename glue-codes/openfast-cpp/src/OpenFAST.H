@@ -118,6 +118,8 @@ class OpenFAST {
   std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)
   // hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
 
+  std::vector<std::vector<double> > referencePosition;
+
   std::vector<ExtInfw_InputType_t> cDriver_Input_from_FAST;
   std::vector<ExtInfw_OutputType_t> cDriver_Output_to_FAST;
 

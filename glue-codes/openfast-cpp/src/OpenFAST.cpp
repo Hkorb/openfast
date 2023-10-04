@@ -293,6 +293,9 @@ void fast::OpenFAST::solution0() {
             // Update Hub
             FAST_HubPosition(&iTurb, HubPosition[iTurb].data(), HubRotationVelocity[iTurb].data(), HubOrientation[iTurb].data(), &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
+
+            for(int i=0; i<3; ++i) referencePosition[iTurb][i] = globTurbineData[iTurb].TurbineHubPos[i] - HubPosition[iTurb][i];
+            
         }
 
         timeZero = false;
@@ -1095,16 +1098,18 @@ void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates_x, doubl
         int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
         int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
 
+        const double refPos[3] = {referencePosition[iTurbLoc][0], referencePosition[iTurbLoc][1], referencePosition[iTurbLoc][2]};
+
         //Nacelle
-        nacelle_coordinates_x[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pxForce[0];
-        nacelle_coordinates_y[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
-        nacelle_coordinates_z[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+        nacelle_coordinates_x[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pxForce[0] + refPos[0];
+        nacelle_coordinates_y[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pyForce[0] + refPos[1];
+        nacelle_coordinates_z[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pzForce[0] + refPos[2];
 
         //Blade
         for(int iNode = 0; iNode < nNodesAllBlades; iNode++){
-            blade_coordinates_x[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pxForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pxForce[0];
-            blade_coordinates_y[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pyForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
-            blade_coordinates_z[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pzForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+            blade_coordinates_x[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pxForce[1+iNode] + refPos[0];
+            blade_coordinates_y[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pyForce[1+iNode] + refPos[1];
+            blade_coordinates_z[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pzForce[1+iNode] + refPos[2];
         }
         iBladeNode += nNodesAllBlades;
 
@@ -1290,6 +1295,7 @@ void fast::OpenFAST::allocateMemory() {
 
     TurbID.resize(nTurbinesProc);
     TurbineBasePos.resize(nTurbinesProc);
+    referencePosition.resize(nTurbinesProc);
     FASTInputFileName.resize(nTurbinesProc);
     CheckpointFileRoot.resize(nTurbinesProc);
     nacelle_cd.resize(nTurbinesProc);
@@ -1306,6 +1312,7 @@ void fast::OpenFAST::allocateMemory() {
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
         TurbineBasePos[iTurb].resize(3);
+        referencePosition[iTurb].resize(3);
 
         int globProc = turbineMapProcToGlob[iTurb];
         TurbID[iTurb] = globTurbineData[globProc].TurbID;
