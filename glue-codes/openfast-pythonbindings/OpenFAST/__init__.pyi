@@ -53,7 +53,9 @@ class OpenFAST:
                    tower_forces_z: array): ...
     
     def get_coordinates(self,
-                nacelle_coordinates: array,
+                nacelle_coordinates_x: array,
+                nacelle_coordinates_y: array,
+                nacelle_coordinates_z: array,
                 blade_coordinates_x: array,
                 blade_coordinates_y: array,
                 blade_coordinates_z: array,

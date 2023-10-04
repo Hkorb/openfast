@@ -10,13 +10,13 @@
 #include <map>
 #include "dlfcn.h"
 //TODO: The skip MPICXX is put in place primarily to get around errors in OpenFOAM. This will cause problems if the driver program uses C++ API for MPI.
-// #ifndef OMPI_SKIP_MPICXX
-//  #define OMPI_SKIP_MPICXX
-// #endif
-// #ifndef MPICH_SKIP_MPICXX
-//  #define MPICH_SKIP_MPICXX
-// #endif
-// #include "mpi.h"
+#ifndef OMPI_SKIP_MPICXX
+ #define OMPI_SKIP_MPICXX
+#endif
+#ifndef MPICH_SKIP_MPICXX
+ #define MPICH_SKIP_MPICXX
+#endif
+#include "mpi.h"
 #include "SC.h"
 
 
@@ -228,7 +228,7 @@ class OpenFAST {
   void setAllLocalVelocitiesFromBladeFrame(double* nacelle_velocities, double* blade_velocities_x, double* blade_velocities_y, double* blade_velocities_z, double* tower_velocities_x, double* tower_velocities_y, double* tower_velocities_z, double* radii, int numberOfExternPoints, double* heights, int numberOfExternHeights);
   void getAllLocalForces(double* nacelle_forces, double* blade_forces_x, double* blade_forces_y, double* blade_forces_z, double* tower_forces_x, double* tower_forces_y, double* tower_forces_z);
   void getAllLocalForcesInBladeFrame(double* nacelle_forces, double* blade_forces_x, double* blade_forces_y, double* blade_forces_z, double* tower_forces_x, double* tower_forces_y, double* tower_forces_z, double* radii, int numberOfInputPoints);
-  void getAllLocalCoordinates(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z);
+  void getAllLocalCoordinates(double* nacelle_coordinates_x, double* nacelle_coordinates_y, double* nacelle_coordinates_z, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z);
   void getAllLocalCoordinatesInBladeFrame(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z, double* radii, int numberOfInputPoints);
   void getAllLocalAzimuths(double* azimuths);
   void getAllLocalRotorSpeeds(double* rotor_speeds);

@@ -48,12 +48,12 @@ void get_forces(
 
 void get_coordinates(
     fast::OpenFAST& self, 
-    py::array_t<double> nacelle_coordinates, 
+    py::array_t<double> nacelle_coordinates_x, py::array_t<double> nacelle_coordinates_y, py::array_t<double> nacelle_coordinates_z, 
     py::array_t<double> blade_coordinates_x, py::array_t<double> blade_coordinates_y, py::array_t<double> blade_coordinates_z, 
     py::array_t<double> tower_coordinates_x, py::array_t<double> tower_coordinates_y, py::array_t<double> tower_coordinates_z) 
 {
     self.getAllLocalCoordinates( 
-        convert_to_pointer(nacelle_coordinates), 
+        convert_to_pointer(nacelle_coordinates_x), convert_to_pointer(nacelle_coordinates_y), convert_to_pointer(nacelle_coordinates_z), 
         convert_to_pointer(blade_coordinates_x), convert_to_pointer(blade_coordinates_y), convert_to_pointer(blade_coordinates_z), 
         convert_to_pointer(tower_coordinates_x), convert_to_pointer(tower_coordinates_y), convert_to_pointer(tower_coordinates_z));
 }
@@ -147,7 +147,7 @@ PYBIND11_MODULE(bindings, m) {
         .def("calc_nacelle_force", &fast::OpenFAST::calc_nacelle_force, py::arg("u"), py::arg("v"), py::arg("w"), py::arg("cd"), py::arg("area"), py::arg("rho"), py::arg("fx"), py::arg("fy"), py::arg("fz"))
         .def("set_velocities", &set_velocities, py::arg("nacelle_velocities"), py::arg("blade_velocities_x"), py::arg("blade_velocities_y"), py::arg("blade_velocities_z"), py::arg("tower_velocities_x"), py::arg("tower_velocities_y"), py::arg("tower_velocities_z"))
         .def("get_forces", &get_forces, py::arg("nacelle_forces"), py::arg("blade_forces_x"), py::arg("blade_forces_y"), py::arg("blade_forces_z"), py::arg("tower_forces_x"), py::arg("tower_forces_y"), py::arg("tower_forces_z"))
-        .def("get_coordinates", &get_coordinates, py::arg("nacelle_coordinates"), py::arg("blade_coordinates_x"), py::arg("blade_coordinates_y"), py::arg("blade_coordinates_z"), py::arg("tower_coordinates_x"), py::arg("tower_coordinates_y"), py::arg("tower_coordinates_z"))
+        .def("get_coordinates", &get_coordinates, py::arg("nacelle_coordinates_x"), py::arg("nacelle_coordinates_y"), py::arg("nacelle_coordinates_z"), py::arg("blade_coordinates_x"), py::arg("blade_coordinates_y"), py::arg("blade_coordinates_z"), py::arg("tower_coordinates_x"), py::arg("tower_coordinates_y"), py::arg("tower_coordinates_z"))
         .def("interpolate_velocity_at_force_nodes_to_velocity_nodes", &fast::OpenFAST::interpolateVel_ForceToVelNodes)
         .def("allocate_turbines_to_procs_simple", &fast::OpenFAST::allocateTurbinesToProcsSimple)
         .def("compute_torque_thrust", [](fast::OpenFAST& self, py::array_t<double> torque, py::array_t<double> thrust)

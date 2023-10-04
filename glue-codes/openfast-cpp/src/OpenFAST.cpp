@@ -1084,7 +1084,7 @@ void fast::OpenFAST::getAllLocalForcesInBladeFrame(double* nacelle_forces, doubl
 
 /*Copies all coordinates at force nodes relative to the hub position.
 Assumes arrays are layed out as turbine, blade, node*/
-void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z)
+void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates_x, double* nacelle_coordinates_y, double* nacelle_coordinates_z, double* blade_coordinates_x, double* blade_coordinates_y, double* blade_coordinates_z, double* tower_coordinates_x, double* tower_coordinates_y, double* tower_coordinates_z)
 {
     
     int iBladeNode = 0;
@@ -1092,28 +1092,26 @@ void fast::OpenFAST::getAllLocalCoordinates(double* nacelle_coordinates, double*
 
     for(int iTurbLoc = 0; iTurbLoc < nTurbinesProc; iTurbLoc++)
     {
-        int iNode = 0;
         int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
         int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
 
         //Nacelle
-        nacelle_coordinates[3*iTurbLoc  ] = cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode];
-        nacelle_coordinates[3*iTurbLoc+1] = cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode];
-        nacelle_coordinates[3*iTurbLoc+2] = cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode];
-        iNode++;
+        nacelle_coordinates_x[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pxForce[0];
+        nacelle_coordinates_y[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+        nacelle_coordinates_z[iTurbLoc] = cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
 
         //Blade
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode]+nNodesAllBlades, &blade_coordinates_x[iBladeNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode]+nNodesAllBlades, &blade_coordinates_y[iBladeNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode]+nNodesAllBlades, &blade_coordinates_z[iBladeNode]);
-        iNode += nNodesAllBlades;
+        for(int iNode = 0; iNode < nNodesAllBlades; iNode++){
+            blade_coordinates_x[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pxForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pxForce[0];
+            blade_coordinates_y[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pyForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pyForce[0];
+            blade_coordinates_z[iBladeNode+iNode] = cDriver_Input_from_FAST[iTurbLoc].pzForce[1+iNode] - cDriver_Input_from_FAST[iTurbLoc].pzForce[0];
+        }
         iBladeNode += nNodesAllBlades;
 
         //Tower
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode]+nNodesTower, &tower_coordinates_x[iTowerNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pyForce[iNode]+nNodesTower, &tower_coordinates_y[iTowerNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode], &cDriver_Input_from_FAST[iTurbLoc].pzForce[iNode]+nNodesTower, &tower_coordinates_z[iTowerNode]);
-        iNode += nNodesTower;
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pxForce[1+nNodesAllBlades], &cDriver_Input_from_FAST[iTurbLoc].pxForce[1+nNodesAllBlades]+nNodesTower, &tower_coordinates_x[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pyForce[1+nNodesAllBlades], &cDriver_Input_from_FAST[iTurbLoc].pyForce[1+nNodesAllBlades]+nNodesTower, &tower_coordinates_y[iTowerNode]);
+        std::copy(&cDriver_Input_from_FAST[iTurbLoc].pzForce[1+nNodesAllBlades], &cDriver_Input_from_FAST[iTurbLoc].pzForce[1+nNodesAllBlades]+nNodesTower, &tower_coordinates_z[iTowerNode]);
         iTowerNode += nNodesTower;
     }
 }
