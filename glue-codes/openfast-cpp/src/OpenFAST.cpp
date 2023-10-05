@@ -972,12 +972,17 @@ void fast::OpenFAST::getAllLocalForces(double* nacelle_forces, double* blade_for
     
     int iBladeNode = 0;
     int iTowerNode = 0;
+    const double smoothness = 2.0;
+    const double smoothnessWeight = 1.0 / (smoothness + 2.0);
+
 
     for(int iTurbLoc = 0; iTurbLoc < nTurbinesProc; iTurbLoc++)
     {
         int iNode = 0;
-        int nNodesAllBlades = get_numForcePtsBladeLoc(iTurbLoc)*get_numBladesLoc(iTurbLoc);
-        int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
+        const int nBlades = get_numBladesLoc(iTurbLoc);
+        const int nBladeNodes = get_numForcePtsBladeLoc(iTurbLoc);
+        const int nNodesAllBlades = nBlades*nBladeNodes;
+        const int nNodesTower = get_numForcePtsTwrLoc(iTurbLoc);
 
         //Nacelle
         nacelle_forces[3*iTurbLoc  ] = cDriver_Input_from_FAST[iTurbLoc].fx[iNode];
@@ -985,13 +990,43 @@ void fast::OpenFAST::getAllLocalForces(double* nacelle_forces, double* blade_for
         nacelle_forces[3*iTurbLoc+2] = cDriver_Input_from_FAST[iTurbLoc].fz[iNode];
         iNode++;
 
-        //Blade
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fx[iNode], &cDriver_Input_from_FAST[iTurbLoc].fx[iNode]+nNodesAllBlades, &blade_forces_x[iBladeNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fy[iNode], &cDriver_Input_from_FAST[iTurbLoc].fy[iNode]+nNodesAllBlades, &blade_forces_y[iBladeNode]);
-        std::copy(&cDriver_Input_from_FAST[iTurbLoc].fz[iNode], &cDriver_Input_from_FAST[iTurbLoc].fz[iNode]+nNodesAllBlades, &blade_forces_z[iBladeNode]);
-        iNode += nNodesAllBlades;
-        iBladeNode += nNodesAllBlades;
 
+        //Blade
+        // std::copy(&cDriver_Input_from_FAST[iTurbLoc].fx[iNode], &cDriver_Input_from_FAST[iTurbLoc].fx[iNode]+nNodesAllBlades, &blade_forces_x[iBladeNode]);
+        // std::copy(&cDriver_Input_from_FAST[iTurbLoc].fy[iNode], &cDriver_Input_from_FAST[iTurbLoc].fy[iNode]+nNodesAllBlades, &blade_forces_y[iBladeNode]);
+        // std::copy(&cDriver_Input_from_FAST[iTurbLoc].fz[iNode], &cDriver_Input_from_FAST[iTurbLoc].fz[iNode]+nNodesAllBlades, &blade_forces_z[iBladeNode]);
+        // iNode += nNodesAllBlades;
+        // iBladeNode += nNodesAllBlades;
+        //Blades, smoothed
+        for(int iBlade=0; iBlade<nBlades; iBlade++){
+            std::array<double,3> last;
+            std::array<double,3> current = {cDriver_Input_from_FAST[iTurbLoc].fx[iNode  ], cDriver_Input_from_FAST[iTurbLoc].fy[iNode  ], cDriver_Input_from_FAST[iTurbLoc].fz[iNode  ]};
+            std::array<double,3> next    = {cDriver_Input_from_FAST[iTurbLoc].fx[iNode+1], cDriver_Input_from_FAST[iTurbLoc].fy[iNode+1], cDriver_Input_from_FAST[iTurbLoc].fz[iNode+1]};
+            blade_forces_x[iBladeNode] = current[0];
+            blade_forces_y[iBladeNode] = current[1];
+            blade_forces_z[iBladeNode] = current[2];
+            iBladeNode++;
+            iNode++;
+            for(int i=0; i<nBladeNodes-2; i++){
+                last.swap(current);
+                current.swap(next);
+
+                next[0] = cDriver_Input_from_FAST[iTurbLoc].fx[iNode+1];
+                next[1] = cDriver_Input_from_FAST[iTurbLoc].fy[iNode+1];
+                next[2] = cDriver_Input_from_FAST[iTurbLoc].fz[iNode+1];
+                blade_forces_x[iBladeNode] = smoothnessWeight*(smoothness*current[0] + last[0] + next[0]);
+                blade_forces_y[iBladeNode] = smoothnessWeight*(smoothness*current[1] + last[1] + next[1]);
+                blade_forces_z[iBladeNode] = smoothnessWeight*(smoothness*current[2] + last[2] + next[2]);
+                iNode++;
+                iBladeNode++;
+
+            }
+            blade_forces_x[iBladeNode] = next[0];
+            blade_forces_y[iBladeNode] = next[1];
+            blade_forces_z[iBladeNode] = next[2];
+            iNode++;
+            iBladeNode++;
+        }
         //Tower
         std::copy(&cDriver_Input_from_FAST[iTurbLoc].fx[iNode], &cDriver_Input_from_FAST[iTurbLoc].fx[iNode]+nNodesTower, &tower_forces_x[iTowerNode]);
         std::copy(&cDriver_Input_from_FAST[iTurbLoc].fy[iNode], &cDriver_Input_from_FAST[iTurbLoc].fy[iNode]+nNodesTower, &tower_forces_y[iTowerNode]);
